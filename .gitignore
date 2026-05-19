@@ -1,0 +1,10 @@
+﻿.idea/
+/*logs/
+*.DotSettings.user
+bin/
+obj/
+packages/
+.vs/
+secrets.json, .env, *.pfx
+
+
