@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Holmsgaard.ApiService/Holmsgaard.ApiService.csproj" />
+  <Project Path="Holmsgaard.AppHost/Holmsgaard.AppHost.csproj" />
+  <Project Path="Holmsgaard.ServiceDefaults/Holmsgaard.ServiceDefaults.csproj" />
+  <Project Path="Holmsgaard.Tests/Holmsgaard.Tests.csproj" />
+  <Project Path="Holmsgaard.Web/Holmsgaard.Web.csproj" />
+</Solution>
