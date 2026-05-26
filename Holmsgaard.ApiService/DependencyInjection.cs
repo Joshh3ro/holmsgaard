@@ -1,6 +1,6 @@
 using Holmsgaard.ApiService.Application.Interfaces;
 using Holmsgaard.ApiService.Application.Services;
-using Holmsgaard.ApiService.Infrastructure.InMemory;
+using Holmsgaard.ApiService.Infrastructure.EfCore;
 
 namespace Holmsgaard.ApiService;
 
@@ -8,11 +8,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddHolmsgaardBackend(this IServiceCollection services)
     {
-        services.AddSingleton<ICustomerRepository, InMemoryCustomerRepository>();
-        services.AddSingleton<IEmployeeRepository, InMemoryEmployeeRepository>();
-        services.AddSingleton<IActivityRepository, InMemoryActivityRepository>();
-        services.AddSingleton<IProductRepository, InMemoryProductRepository>();
-        services.AddSingleton<ITimeRegistrationRepository, InMemoryTimeRegistrationRepository>();
+        services.AddScoped<ICustomerRepository, EfCoreCustomerRepository>();
+        services.AddScoped<IEmployeeRepository, EfCoreEmployeeRepository>();
+        services.AddScoped<IActivityRepository, EfCoreActivityRepository>();
+        services.AddScoped<IProductRepository, EfCoreProductRepository>();
+        services.AddScoped<ITimeRegistrationRepository, EfCoreTimeRegistrationRepository>();
 
         services.AddScoped<CustomerService>();
         services.AddScoped<EmployeeService>();

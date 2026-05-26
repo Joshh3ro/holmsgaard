@@ -27,6 +27,6 @@ internal static class MappingExtensions
 
     public static TimeRegistrationDto ToDto(this TimeRegistration registration)
     {
-        return new TimeRegistrationDto(registration.Id, registration.EmployeeId, registration.ActivityId, registration.WorkDate, registration.Hours, registration.Note);
+        return new TimeRegistrationDto(registration.Id, registration.EmployeeId, registration.ActivityId, registration.WorkDate, registration.Hours, registration.Note, registration.Type);
     }
 }

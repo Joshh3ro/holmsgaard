@@ -7,5 +7,7 @@ public interface IEmployeeRepository
     IReadOnlyCollection<Employee> GetAll();
     Employee? GetById(Guid id);
     void Add(Employee employee);
+    void Update(Employee employee);
     void Delete(Guid id);
+    void SaveChanges();
 }

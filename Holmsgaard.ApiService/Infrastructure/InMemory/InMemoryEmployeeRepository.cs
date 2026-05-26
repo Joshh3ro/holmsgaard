@@ -28,6 +28,16 @@ public sealed class InMemoryEmployeeRepository : IEmployeeRepository
         employees[employee.Id] = employee;
     }
 
+    public void Update(Employee employee)
+    {
+        employees[employee.Id] = employee;
+    }
+
+    public void SaveChanges()
+    {
+        // In-memory: no-op, changes are immediate
+    }
+
     public void Delete(Guid id)
     {
         employees.Remove(id);

@@ -1,0 +1,220 @@
+@page "/employees"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+
+<h3>Medarbejdere</h3>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="ShowCreateDialog">
+        <span class="bi bi-plus-circle"></span> Tilføj medarbejder
+    </button>
+</div>
+
+@if (employees == null)
+{
+    <p><em>Indlæser...</em></p>
+}
+else if (!employees.Any())
+{
+    <p>Der er ingen medarbejdere endnu.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Navn</th>
+                <th>Email</th>
+                <th>Timesats</th>
+                <th>Aktiv</th>
+                <th>Handlinger</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emp in employees)
+            {
+                <tr>
+                    <td>@emp.FullName</td>
+                    <td>@emp.Email</td>
+                    <td>@emp.HourlyRate kr/time</td>
+                    <td>
+                        <span class="badge @(emp.IsActive ? "bg-success" : "bg-secondary")">
+                            @(emp.IsActive ? "Ja" : "Nej")
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditEmployee(emp)">
+                            Rediger
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (showDialog)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Rediger medarbejder" : "Tilføj medarbejder")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="fullName" class="form-label">Navn</label>
+                        <input type="text" class="form-control" id="fullName" @bind="formEmployee.FullName" placeholder="Fuldt navn" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" @bind="formEmployee.Email" placeholder="email@eksempel.dk" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="hourlyRate" class="form-label">Timesats (kr)</label>
+                        <input type="number" class="form-control" id="hourlyRate" @bind="formEmployee.HourlyRate" min="0" step="0.01" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="isActive" class="form-label">
+                            <input type="checkbox" id="isActive" @bind="formEmployee.IsActive" />
+                            Aktiv
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDialog">Annuller</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveEmployee" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        Gem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@code {
+    private List<EmployeeDto>? employees;
+    private EmployeeDto formEmployee = new();
+    private bool showDialog = false;
+    private bool isEditing = false;
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployees();
+    }
+
+    private async Task LoadEmployees()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            employees = await client.GetFromJsonAsync<List<EmployeeDto>>("api/employees");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl ved indlæsning: {ex.Message}";
+        }
+    }
+
+    private void ShowCreateDialog()
+    {
+        formEmployee = new EmployeeDto(Guid.Empty, "", "", 0, true);
+        isEditing = false;
+        showDialog = true;
+        errorMessage = null;
+    }
+
+    private void EditEmployee(EmployeeDto emp)
+    {
+        formEmployee = new EmployeeDto(emp.Id, emp.FullName, emp.Email, emp.HourlyRate, emp.IsActive);
+        isEditing = true;
+        showDialog = true;
+        errorMessage = null;
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        errorMessage = null;
+    }
+
+    private async Task SaveEmployee()
+    {
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            if (isEditing)
+            {
+                var updateRequest = new { FullName = formEmployee.FullName, Email = formEmployee.Email, HourlyRate = formEmployee.HourlyRate };
+                var response = await client.PutAsJsonAsync($"api/employees/{formEmployee.Id}", updateRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    errorMessage = "Fejl ved opdatering af medarbejder.";
+                    isSaving = false;
+                    return;
+                }
+            }
+            else
+            {
+                var createRequest = new { FullName = formEmployee.FullName, Email = formEmployee.Email, HourlyRate = formEmployee.HourlyRate };
+                var response = await client.PostAsJsonAsync("api/employees", createRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    errorMessage = "Fejl ved oprettelse af medarbejder.";
+                    isSaving = false;
+                    return;
+                }
+            }
+
+            showDialog = false;
+            await LoadEmployees();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public class EmployeeDto
+    {
+        public Guid Id { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public decimal HourlyRate { get; set; }
+        public bool IsActive { get; set; }
+
+        public EmployeeDto() { }
+
+        public EmployeeDto(Guid id, string fullName, string email, decimal hourlyRate, bool isActive)
+        {
+            Id = id;
+            FullName = fullName;
+            Email = email;
+            HourlyRate = hourlyRate;
+            IsActive = isActive;
+        }
+    }
+}

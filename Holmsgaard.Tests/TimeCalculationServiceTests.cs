@@ -39,6 +39,54 @@ public class TimeCalculationServiceTests
     }
 
     [Fact]
+    public void GetTimeRegistrationsCanFilterByEmployee()
+    {
+        var service = CreateService();
+
+        service.RegisterTime(new RegisterEmployeeTimeCommand(DemoEmployeeId, DemoActivityId, new DateOnly(2026, 5, 23), 2m, "Formiddag"));
+        service.RegisterTime(new RegisterEmployeeTimeCommand(DemoEmployeeId, DemoActivityId, new DateOnly(2026, 5, 24), 3m, "Eftermiddag"));
+
+        var registrations = service.GetTimeRegistrations(DemoEmployeeId);
+
+        Assert.Equal(2, registrations.Count);
+        Assert.All(registrations, registration => Assert.Equal(DemoEmployeeId, registration.EmployeeId));
+        Assert.Equal(new DateOnly(2026, 5, 24), registrations.First().WorkDate);
+    }
+
+    [Fact]
+    public void UpdateTimeRegistrationChangesExistingRegistration()
+    {
+        var service = CreateService();
+        var registration = service.RegisterTime(new RegisterEmployeeTimeCommand(DemoEmployeeId, DemoActivityId, new DateOnly(2026, 5, 23), 2m, "Formiddag"));
+
+        var updated = service.UpdateTimeRegistration(new UpdateTimeRegistrationCommand(
+            registration.Id,
+            DemoEmployeeId,
+            DemoActivityId,
+            new DateOnly(2026, 5, 24),
+            4.5m,
+            "Rettet note"));
+
+        Assert.NotNull(updated);
+        Assert.Equal(new DateOnly(2026, 5, 24), updated.WorkDate);
+        Assert.Equal(4.5m, updated.Hours);
+        Assert.Equal("Rettet note", updated.Note);
+    }
+
+    [Fact]
+    public void DeleteTimeRegistrationRemovesExistingRegistration()
+    {
+        var service = CreateService();
+        var registration = service.RegisterTime(new RegisterEmployeeTimeCommand(DemoEmployeeId, DemoActivityId, new DateOnly(2026, 5, 23), 2m, "Formiddag"));
+
+        var deleted = service.DeleteTimeRegistration(registration.Id);
+        var registrations = service.GetTimeRegistrations(DemoEmployeeId);
+
+        Assert.True(deleted);
+        Assert.Empty(registrations);
+    }
+
+    [Fact]
     public void ZeroHoursAreAllowed()
     {
         var service = CreateService();

@@ -26,4 +26,19 @@ public sealed class InMemoryTimeRegistrationRepository : ITimeRegistrationReposi
     {
         registrations[registration.Id] = registration;
     }
+
+    public void Update(TimeRegistration registration)
+    {
+        registrations[registration.Id] = registration;
+    }
+
+    public void Delete(Guid id)
+    {
+        registrations.Remove(id);
+    }
+
+    public void SaveChanges()
+    {
+        // No-op for in-memory; changes are immediate
+    }
 }

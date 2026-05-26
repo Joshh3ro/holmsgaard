@@ -64,13 +64,15 @@ public class ControllerTests
     }
 
     [Fact]
-    public void AuthRegisterReturnsNotImplemented()
+    public void AuthRegisterCreatesEmployeeAndReturnsOk()
     {
-        var controller = new AuthController();
+        var repo = new InMemoryEmployeeRepository();
+        var controller = new AuthController(repo);
 
-        var response = controller.Register(new RegisterRequest("Test User", "test@example.com", "password"));
+        var response = controller.Register(new RegisterRequest("Test User", "test@hgaps.dk", "hemmeligt123"));
 
-        var result = Assert.IsType<ObjectResult>(response);
-        Assert.Equal(501, result.StatusCode);
+        var result = Assert.IsType<OkObjectResult>(response.Result);
+        var authResponse = Assert.IsType<AuthResponse>(result.Value);
+        Assert.Equal("Bearer", authResponse.TokenType);
     }
 }

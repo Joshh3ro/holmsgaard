@@ -8,4 +8,7 @@ public interface ITimeRegistrationRepository
     IReadOnlyCollection<TimeRegistration> GetByEmployeeId(Guid employeeId);
     TimeRegistration? GetById(Guid id);
     void Add(TimeRegistration registration);
+    void Update(TimeRegistration registration);
+    void Delete(Guid id);
+    void SaveChanges();
 }

@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using Holmsgaard.ApiService.Application.Interfaces;
 using Holmsgaard.ApiService.Contracts.Dto;
 using Microsoft.AspNetCore.Mvc;
 
@@ -5,7 +8,7 @@ namespace Holmsgaard.ApiService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class AuthController : ControllerBase
+public sealed class AuthController(IEmployeeRepository employeeRepository) : ControllerBase
 {
     [HttpPost("login")]
     public ActionResult<AuthResponse> Login(LoginRequest request)
@@ -15,16 +18,29 @@ public sealed class AuthController : ControllerBase
             return BadRequest("Email and password are required.");
         }
 
-        var response = new AuthResponse(
-            Token: "mock-jwt-token-for-frontend-development",
-            TokenType: "Bearer",
-            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
+        var employee = employeeRepository.GetAll()
+            .FirstOrDefault(e => e.Email.Equals(request.Email, StringComparison.OrdinalIgnoreCase));
 
-        return Ok(response);
+        if (employee is null)
+        {
+            return Unauthorized("Invalid email or password.");
+        }
+
+        var hash = HashPassword(request.Password);
+        if (employee.PasswordHash != hash)
+        {
+            return Unauthorized("Invalid email or password.");
+        }
+
+        var token = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        return Ok(new AuthResponse(
+            Token: token,
+            TokenType: "Bearer",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(8)));
     }
 
     [HttpPost("register")]
-    public IActionResult Register(RegisterRequest request)
+    public ActionResult<AuthResponse> Register(RegisterRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.FullName) ||
             string.IsNullOrWhiteSpace(request.Email) ||
@@ -33,6 +49,31 @@ public sealed class AuthController : ControllerBase
             return BadRequest("Full name, email and password are required.");
         }
 
-        return StatusCode(StatusCodes.Status501NotImplemented, "Registration is prepared for the API contract, but full authentication is not implemented yet.");
+        var existing = employeeRepository.GetAll()
+            .FirstOrDefault(e => e.Email.Equals(request.Email, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is not null)
+        {
+            return BadRequest("An employee with this email already exists.");
+        }
+
+        var hash = HashPassword(request.Password);
+        // HourlyRate default 0 for registered users
+        var employee = new Domain.Entities.Employee(
+            Guid.NewGuid(), request.FullName, request.Email, 0m, hash);
+
+        employeeRepository.Add(employee);
+
+        var token = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        return Ok(new AuthResponse(
+            Token: token,
+            TokenType: "Bearer",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(8)));
+    }
+
+    private static string HashPassword(string password)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password + "HolmsgaardSalt2026"));
+        return Convert.ToBase64String(bytes);
     }
 }
