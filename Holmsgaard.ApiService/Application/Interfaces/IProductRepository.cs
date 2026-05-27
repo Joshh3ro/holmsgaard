@@ -8,4 +8,5 @@ public interface IProductRepository
     Product? GetById(Guid id);
     void Add(Product product);
     void Delete(Guid id);
+    void SaveChanges();
 }

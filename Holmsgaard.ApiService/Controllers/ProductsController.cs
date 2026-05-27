@@ -28,7 +28,7 @@ public sealed class ProductsController(ProductService productService) : Controll
     {
         try
         {
-            var product = productService.CreateProduct(new CreateProductCommand(request.Name, request.Sku, request.UnitPrice, request.StockQuantity));
+            var product = productService.CreateProduct(new CreateProductCommand(request.Name, request.Sku, request.UnitPrice, request.StockQuantity, request.Category));
             return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
         }
         catch (ArgumentException exception)
@@ -42,7 +42,7 @@ public sealed class ProductsController(ProductService productService) : Controll
     {
         try
         {
-            var product = productService.UpdateProduct(new UpdateProductCommand(id, request.Name, request.Sku, request.UnitPrice, request.StockQuantity));
+            var product = productService.UpdateProduct(new UpdateProductCommand(id, request.Name, request.Sku, request.UnitPrice, request.StockQuantity, request.Category));
             return product is null ? NotFound() : Ok(product);
         }
         catch (ArgumentException exception)

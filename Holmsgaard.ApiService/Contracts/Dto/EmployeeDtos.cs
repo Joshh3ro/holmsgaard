@@ -4,4 +4,4 @@ public sealed record EmployeeDto(Guid Id, string FullName, string Email, decimal
 
 public sealed record CreateEmployeeRequest(string FullName, string Email, decimal HourlyRate);
 
-public sealed record UpdateEmployeeRequest(string FullName, string Email, decimal HourlyRate);
+public sealed record UpdateEmployeeRequest(string FullName, string Email, decimal HourlyRate, bool IsActive = true);

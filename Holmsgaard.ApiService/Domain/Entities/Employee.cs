@@ -48,4 +48,9 @@ public sealed class Employee
     {
         IsActive = false;
     }
+
+    public void SetActive(bool isActive)
+    {
+        IsActive = isActive;
+    }
 }

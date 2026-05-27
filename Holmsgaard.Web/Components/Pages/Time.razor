@@ -5,32 +5,37 @@
 
 <PageTitle>Tidsregistrering - Holmsgaard</PageTitle>
 
-<div class="container-fluid py-4 time-page">
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+<div class="container mt-4">
+    @* Header *@
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
             <h2 class="mb-1">Tidsregistrering</h2>
-            <p class="text-muted mb-0">Se medarbejdernes timer og registrer ny arbejdstid fra samme side.</p>
+            <p class="text-muted mb-0">Se medarbejdernes tider og registrer nye timer.</p>
         </div>
-
-        <button type="button" class="btn btn-primary" @onclick="OpenRegistrationPanel" disabled="@isLoading">
-            Registrer tid
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="OpenRegistrationPanel" disabled="@isLoading">
+            <span class="bi bi-plus-circle"></span> Registrer tid
         </button>
     </div>
 
+    @* Alerts *@
     @if (!string.IsNullOrEmpty(successMessage))
     {
-        <div class="alert alert-success">@successMessage</div>
+        <div class="alert alert-success d-inline-flex align-items-center gap-2 mb-3">
+            <span class="bi bi-check-circle"></span> @successMessage
+        </div>
     }
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="alert alert-danger">@errorMessage</div>
+        <div class="alert alert-danger d-inline-flex align-items-center gap-2 mb-3">
+            <span class="bi bi-exclamation-triangle"></span> @errorMessage
+        </div>
     }
 
     @if (isLoading)
     {
-        <div class="card">
-            <div class="card-body">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center text-muted">
                 <em>Indlæser tidsregistreringer...</em>
             </div>
         </div>
@@ -38,24 +43,25 @@
     else
     {
         <div class="row g-4">
-            <div class="col-12 col-xl-4">
-                <div class="card h-100">
-                    <div class="card-header bg-white">
+            @* Employee List *@
+            <div class="col-12 col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
                         <strong>Medarbejdere</strong>
                     </div>
-                    <div class="list-group list-group-flush employee-list">
+                    <div class="list-group list-group-flush">
                         @foreach (var employee in employees)
                         {
                             var summary = GetEmployeeSummary(employee.Id);
                             <button type="button"
-                                    class="list-group-item list-group-item-action @(selectedEmployeeId == employee.Id ? "active" : "")"
+                                    class="list-group-item list-group-item-action py-3 @(selectedEmployeeId == employee.Id ? "active" : "")"
                                     @onclick="() => SelectEmployee(employee.Id)">
-                                <div class="d-flex justify-content-between gap-3">
-                                    <span class="fw-semibold">@employee.FullName</span>
-                                    <span>@summary.TotalHours.ToString("0.##") t</span>
+                                <div class="d-flex justify-content-between align-items-center gap-3">
+                                    <span class="fw-medium">@employee.FullName</span>
+                                    <span class="badge rounded-pill @(selectedEmployeeId == employee.Id ? "bg-light text-dark" : "bg-primary")">@summary.TotalHours.ToString("0.##") t</span>
                                 </div>
                                 <div class="small @(selectedEmployeeId == employee.Id ? "text-white-50" : "text-muted")">
-                                    @summary.RegistrationCount registrering(er) · @employee.HourlyRate.ToString("0.##") kr/time
+                                    @summary.RegistrationCount registrering(er)
                                 </div>
                             </button>
                         }
@@ -63,53 +69,59 @@
                 </div>
             </div>
 
-            <div class="col-12 col-xl-8">
-                <div class="card h-100">
-                    <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between gap-2">
+            @* Registrations Table *@
+            <div class="col-12 col-lg-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 py-3">
                         <div>
                             <strong>@SelectedEmployeeName</strong>
                             <div class="small text-muted">Registrerede timer</div>
                         </div>
-                        <div class="d-flex gap-3 small text-muted">
-                            <span>@SelectedRegistrations.Sum(registration => registration.Hours).ToString("0.##") timer</span>
-                            <span>@SelectedRegistrations.Count registreringer</span>
+                        <div class="small text-muted">
+                            @SelectedRegistrations.Sum(registration => registration.Hours).ToString("0.##") timer · @SelectedRegistrations.Count registreringer
                         </div>
                     </div>
 
                     @if (!SelectedRegistrations.Any())
                     {
-                        <div class="card-body">
-                            <p class="text-muted mb-0">Der er ingen tidsregistreringer for den valgte medarbejder endnu.</p>
+                        <div class="card-body text-center text-muted">
+                            <p class="mb-0">Der er ingen tidsregistreringer for den valgte medarbejder endnu.</p>
                         </div>
                     }
                     else
                     {
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
-                                <thead>
+                                <thead class="table-light">
                                     <tr>
-                                        <th>Dato</th>
-                                        <th>Aktivitet</th>
-                                        <th>Timer</th>
-                                        <th>Note</th>
-                                        <th class="text-end">Handlinger</th>
+                                        <th scope="col" class="ps-4">Dato</th>
+                                        <th scope="col">Aktivitet</th>
+                                        <th scope="col" class="text-end">Timer</th>
+                                        <th scope="col" class="d-none d-lg-table-cell">Note</th>
+                                        <th scope="col" class="text-end pe-4">Handlinger</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var registration in SelectedRegistrations)
                                     {
                                         <tr>
-                                            <td>@registration.WorkDate.ToString("dd-MM-yyyy")</td>
-                                            <td>@GetActivityTitle(registration.ActivityId)</td>
-                                            <td>@registration.Hours.ToString("0.##")</td>
-                                            <td class="text-muted">@(!string.IsNullOrWhiteSpace(registration.Note) ? registration.Note : "-")</td>
-                                            <td>
-                                                <div class="d-flex justify-content-end gap-2">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditPanel(registration)">
-                                                        Rediger
+                                            <td class="ps-4 text-nowrap">@registration.WorkDate.ToString("dd-MM-yyyy")</td>
+                                            <td class="fw-medium">@GetActivityTitle(registration.ActivityId)</td>
+                                            <td class="text-end text-nowrap">@registration.Hours.ToString("0.##")</td>
+                                            <td class="text-muted d-none d-lg-table-cell">@(!string.IsNullOrWhiteSpace(registration.Note) ? registration.Note : "-")</td>
+                                            <td class="pe-4">
+                                                <div class="d-flex justify-content-end gap-1">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1" @onclick="() => OpenEditPanel(registration)">
+                                                        <span class="bi bi-pencil"></span> Rediger
                                                     </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRegistration(registration)">
-                                                        Slet
+                                                    <button type="button" class="btn btn-sm btn-outline-primary d-md-none" @onclick="() => OpenEditPanel(registration)" title="Rediger">
+                                                        <span class="bi bi-pencil"></span>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger d-none d-md-inline-flex align-items-center gap-1" @onclick="() => DeleteRegistration(registration)">
+                                                        <span class="bi bi-trash"></span> Slet
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger d-md-none" @onclick="() => DeleteRegistration(registration)" title="Slet">
+                                                        <span class="bi bi-trash"></span>
                                                     </button>
                                                 </div>
                                             </td>
@@ -125,73 +137,75 @@
     }
 </div>
 
+@* Registration Modal *@
 @if (showRegistrationPanel)
 {
-    <div class="time-panel-backdrop" @onclick="CloseRegistrationPanel"></div>
-    <aside class="time-registration-panel" aria-label="@PanelTitle">
-        <div class="time-panel-header">
-            <div>
-                <h5 class="mb-1">@PanelTitle</h5>
-                <p class="text-muted mb-0">@PanelDescription</p>
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">@PanelTitle</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseRegistrationPanel"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@formModel" OnValidSubmit="@HandleSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="employee" class="form-label">Medarbejder</label>
+                                <InputSelect id="employee" class="form-select" @bind-Value="formModel.EmployeeId">
+                                    <option value="">-- Vælg medarbejder --</option>
+                                    @foreach (var employee in employees)
+                                    {
+                                        <option value="@employee.Id">@employee.FullName</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="activity" class="form-label">Aktivitet</label>
+                                <InputSelect id="activity" class="form-select" @bind-Value="formModel.ActivityId">
+                                    <option value="">-- Vælg aktivitet --</option>
+                                    @foreach (var activity in activities)
+                                    {
+                                        <option value="@activity.Id">@activity.Title</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="date" class="form-label">Dato</label>
+                                <InputDate id="date" class="form-control" @bind-Value="formModel.WorkDate" />
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="hours" class="form-label">Timer</label>
+                                <InputNumber id="hours" class="form-control" @bind-Value="formModel.Hours" min="0" max="24" step="0.25" />
+                            </div>
+
+                            <div class="col-12">
+                                <label for="note" class="form-label">Note</label>
+                                <InputTextArea id="note" class="form-control" @bind-Value="formModel.Note" rows="3" placeholder="Evt. note til registreringen..." />
+                            </div>
+                        </div>
+
+                        <div class="modal-footer bg-light px-0 pb-0 mt-4">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CloseRegistrationPanel">Annuller</button>
+                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                }
+                                <span class="bi bi-save"></span> @SubmitButtonText
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
             </div>
-            <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseRegistrationPanel"></button>
         </div>
-
-        <div class="time-panel-body">
-            <EditForm Model="@formModel" OnValidSubmit="@HandleSubmit">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-
-                <div class="mb-3">
-                    <label for="employee" class="form-label">Medarbejder</label>
-                    <InputSelect id="employee" class="form-select" @bind-Value="formModel.EmployeeId">
-                        <option value="">-- Vælg medarbejder --</option>
-                        @foreach (var employee in employees)
-                        {
-                            <option value="@employee.Id">@employee.FullName</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <div class="mb-3">
-                    <label for="activity" class="form-label">Aktivitet</label>
-                    <InputSelect id="activity" class="form-select" @bind-Value="formModel.ActivityId">
-                        <option value="">-- Vælg aktivitet --</option>
-                        @foreach (var activity in activities)
-                        {
-                            <option value="@activity.Id">@activity.Title</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <div class="mb-3">
-                    <label for="date" class="form-label">Dato</label>
-                    <InputDate id="date" class="form-control" @bind-Value="formModel.WorkDate" />
-                </div>
-
-                <div class="mb-3">
-                    <label for="hours" class="form-label">Timer</label>
-                    <InputNumber id="hours" class="form-control" @bind-Value="formModel.Hours" min="0" max="24" step="0.25" />
-                </div>
-
-                <div class="mb-4">
-                    <label for="note" class="form-label">Note</label>
-                    <InputTextArea id="note" class="form-control" @bind-Value="formModel.Note" rows="4" placeholder="Evt. note til registreringen..." />
-                </div>
-
-                <div class="d-flex justify-content-end gap-2">
-                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseRegistrationPanel">Annuller</button>
-                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                        @if (isSubmitting)
-                        {
-                            <span class="spinner-border spinner-border-sm"></span>
-                        }
-                        @SubmitButtonText
-                    </button>
-                </div>
-            </EditForm>
-        </div>
-    </aside>
+    </div>
 }
 
 @code {
@@ -210,12 +224,15 @@
 
     private bool IsEditing => editingRegistrationId.HasValue;
     private string PanelTitle => IsEditing ? "Rediger tid" : "Registrer tid";
-    private string PanelDescription => IsEditing ? "Ret medarbejder, aktivitet, dato eller timer." : "Tilføj timer for en medarbejder og aktivitet.";
     private string SubmitButtonText => IsEditing ? "Gem ændringer" : "Gem tid";
 
     private IReadOnlyCollection<TimeRegistrationDto> SelectedRegistrations => selectedEmployeeId is null
         ? []
-        : timeRegistrations.Where(registration => registration.EmployeeId == selectedEmployeeId).ToArray();
+        : timeRegistrations
+            .Where(registration => registration.EmployeeId == selectedEmployeeId)
+            .OrderByDescending(registration => registration.WorkDate)
+            .ThenBy(registration => registration.Id)
+            .ToArray();
 
     private string SelectedEmployeeName => employees.FirstOrDefault(employee => employee.Id == selectedEmployeeId)?.FullName ?? "Vælg en medarbejder";
 

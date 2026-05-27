@@ -49,7 +49,7 @@ public sealed class EmployeesController(EmployeeService employeeService, TimeCal
     {
         try
         {
-            var employee = employeeService.UpdateEmployee(new UpdateEmployeeCommand(id, request.FullName, request.Email, request.HourlyRate));
+            var employee = employeeService.UpdateEmployee(new UpdateEmployeeCommand(id, request.FullName, request.Email, request.HourlyRate, request.IsActive));
             return employee is null ? NotFound() : Ok(employee);
         }
         catch (ArgumentException exception)

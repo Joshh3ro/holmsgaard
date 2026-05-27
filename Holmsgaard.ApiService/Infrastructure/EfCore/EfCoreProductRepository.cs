@@ -27,6 +27,7 @@ public sealed class EfCoreProductRepository : IProductRepository
     public void Add(Product product)
     {
         _context.Products.Add(product);
+        _context.SaveChanges();
     }
 
     public void Delete(Guid id)
@@ -34,7 +35,13 @@ public sealed class EfCoreProductRepository : IProductRepository
         var product = _context.Products.Find(id);
         if (product is not null)
         {
-            _context.Products.Remove(product);
+            product.Deactivate();
+            _context.SaveChanges();
         }
+    }
+
+    public void SaveChanges()
+    {
+        _context.SaveChanges();
     }
 }

@@ -2,47 +2,59 @@
 
 <PageTitle>Oversigt - Holmsgaard</PageTitle>
 
-<div class="container-fluid py-3">
-    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+<div class="container mt-4">
+    @* Header *@
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h1 class="h2 mb-1">Holmsgaard</h1>
+            <h2 class="mb-1">Holmsgaard</h2>
             <p class="text-muted mb-0">Intern oversigt for medarbejdere, aktiviteter og tidsregistrering.</p>
         </div>
-        <div class="d-flex gap-2 align-items-start">
-            <a class="btn btn-primary" href="time">
-                <span class="bi bi-clock-fill me-2" aria-hidden="true"></span>
-                Registrer tid
+        <div class="d-flex gap-2">
+            <a class="btn btn-primary d-inline-flex align-items-center gap-2" href="time">
+                <span class="bi bi-clock-fill"></span> Registrer tid
             </a>
-            <a class="btn btn-outline-primary" href="employees">
-                <span class="bi bi-people-fill me-2" aria-hidden="true"></span>
-                Medarbejdere
+            <a class="btn btn-outline-primary d-inline-flex align-items-center gap-2" href="employees">
+                <span class="bi bi-people-fill"></span> Medarbejdere
             </a>
         </div>
     </div>
 
+    @* Dashboard Cards *@
     <div class="row g-3">
         <div class="col-12 col-lg-4">
-            <section class="border rounded p-3 h-100">
-                <h2 class="h5">Backend</h2>
-                <p class="text-muted mb-3">API'et er bygget med Controllers, DTO'er, Commands, Queries, Services og repository-interfaces.</p>
-                <span class="badge text-bg-success">Klar til CRUD-demo</span>
-            </section>
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title d-flex align-items-center gap-2">
+                        <span class="bi bi-stack text-primary"></span> Backend
+                    </h5>
+                    <p class="text-muted card-text">API'et er bygget med Controllers, DTO'er, Commands, Queries, Services og repository-interfaces.</p>
+                    <span class="badge rounded-pill bg-success">Klar til CRUD-demo</span>
+                </div>
+            </div>
         </div>
 
         <div class="col-12 col-lg-4">
-            <section class="border rounded p-3 h-100">
-                <h2 class="h5">Frontend</h2>
-                <p class="text-muted mb-3">Blazor-siderne bruger backend-data til medarbejdere og tidsregistrering.</p>
-                <span class="badge text-bg-primary">Login-flow startet</span>
-            </section>
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title d-flex align-items-center gap-2">
+                        <span class="bi bi-layers text-primary"></span> Frontend
+                    </h5>
+                    <p class="text-muted card-text">Blazor-siderne bruger backend-data til medarbejdere og tidsregistrering.</p>
+                    <span class="badge rounded-pill bg-primary">Login-flow startet</span>
+                </div>
+            </div>
         </div>
 
         <div class="col-12 col-lg-4">
-            <section class="border rounded p-3 h-100">
-                <h2 class="h5">Næste fokus</h2>
-                <p class="text-muted mb-3">Rigtig JWT-beskyttelse, OWASP-gennemgang, concurrency og Docker/Compose vil give høj eksamensværdi.</p>
-                <span class="badge text-bg-warning">Planlagt</span>
-            </section>
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title d-flex align-items-center gap-2">
+                        <span class="bi bi-arrow-right-circle text-warning"></span> Næste fokus
+                    </h5>
+                    <p class="text-muted card-text">Rigtig JWT-beskyttelse, OWASP-gennemgang, concurrency og Docker/Compose vil give høj eksamensværdi.</p>
+                    <span class="badge rounded-pill bg-warning text-dark">Planlagt</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>

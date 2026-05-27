@@ -12,12 +12,14 @@ public static class DependencyInjection
         services.AddScoped<IEmployeeRepository, EfCoreEmployeeRepository>();
         services.AddScoped<IActivityRepository, EfCoreActivityRepository>();
         services.AddScoped<IProductRepository, EfCoreProductRepository>();
+        services.AddScoped<IWarehouseRepository, EfCoreWarehouseRepository>();
         services.AddScoped<ITimeRegistrationRepository, EfCoreTimeRegistrationRepository>();
 
         services.AddScoped<CustomerService>();
         services.AddScoped<EmployeeService>();
         services.AddScoped<ActivityService>();
         services.AddScoped<ProductService>();
+        services.AddScoped<WarehouseService>();
         services.AddScoped<TimeCalculationService>();
 
         return services;

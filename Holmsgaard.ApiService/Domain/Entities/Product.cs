@@ -8,15 +8,16 @@ public sealed class Product
     public decimal UnitPrice { get; private set; }
     public int StockQuantity { get; private set; }
     public bool IsActive { get; private set; }
+    public ProductCategory Category { get; private set; }
 
-    public Product(Guid id, string name, string sku, decimal unitPrice, int stockQuantity)
+    public Product(Guid id, string name, string sku, decimal unitPrice, int stockQuantity, ProductCategory category = ProductCategory.Materiale)
     {
         Id = id == Guid.Empty ? Guid.NewGuid() : id;
         IsActive = true;
-        Update(name, sku, unitPrice, stockQuantity);
+        Update(name, sku, unitPrice, stockQuantity, category);
     }
 
-    public void Update(string name, string sku, decimal unitPrice, int stockQuantity)
+    public void Update(string name, string sku, decimal unitPrice, int stockQuantity, ProductCategory? category = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -42,6 +43,10 @@ public sealed class Product
         Sku = sku.Trim();
         UnitPrice = unitPrice;
         StockQuantity = stockQuantity;
+        if (category.HasValue)
+        {
+            Category = category.Value;
+        }
     }
 
     public void Deactivate()

@@ -23,7 +23,7 @@ public sealed class ProductService(IProductRepository productRepository)
 
     public ProductDto CreateProduct(CreateProductCommand command)
     {
-        var product = new Product(Guid.NewGuid(), command.Name, command.Sku, command.UnitPrice, command.StockQuantity);
+        var product = new Product(Guid.NewGuid(), command.Name, command.Sku, command.UnitPrice, command.StockQuantity, command.Category);
         productRepository.Add(product);
         return product.ToDto();
     }
@@ -36,7 +36,8 @@ public sealed class ProductService(IProductRepository productRepository)
             return null;
         }
 
-        product.Update(command.Name, command.Sku, command.UnitPrice, command.StockQuantity);
+        product.Update(command.Name, command.Sku, command.UnitPrice, command.StockQuantity, command.Category);
+        productRepository.SaveChanges();
         return product.ToDto();
     }
 

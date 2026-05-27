@@ -37,6 +37,7 @@ public sealed class EmployeeService(IEmployeeRepository employeeRepository)
         }
 
         employee.Update(command.FullName, command.Email, command.HourlyRate);
+        employee.SetActive(command.IsActive);
         employeeRepository.Update(employee);
         employeeRepository.SaveChanges();
         return employee.ToDto();

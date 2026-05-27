@@ -2,105 +2,147 @@
 @rendermode InteractiveServer
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
 
-<h3>Medarbejdere</h3>
+<PageTitle>Medarbejdere - Holmsgaard</PageTitle>
 
-<div class="mb-3">
-    <button class="btn btn-primary" @onclick="ShowCreateDialog">
-        <span class="bi bi-plus-circle"></span> Tilføj medarbejder
-    </button>
+<div class="container mt-4">
+    @* Header *@
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">Medarbejdere</h2>
+            <p class="text-muted mb-0">Oversigt over alle medarbejdere og deres timesatser.</p>
+        </div>
+        <button class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="ShowCreateDialog" disabled="@isSaving">
+            <span class="bi bi-plus-circle"></span> Tilføj medarbejder
+        </button>
+    </div>
+
+    @* Employee Table *@
+    @if (employees == null)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center text-muted">
+                <em>Indlæser...</em>
+            </div>
+        </div>
+    }
+    else if (!employees.Any())
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center text-muted">
+                Der er ingen medarbejdere endnu.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <strong>Alle medarbejdere</strong>
+                <span class="text-muted small">(@employees.Count viser)</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="ps-4">Navn</th>
+                            <th scope="col" class="d-none d-lg-table-cell">Email</th>
+                            <th scope="col" class="text-end">Timesats</th>
+                            <th scope="col" class="text-center">Aktiv</th>
+                            <th scope="col" class="text-end pe-4">Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in employees)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-medium">@emp.FullName</td>
+                                <td class="text-muted d-none d-lg-table-cell">@emp.Email</td>
+                                <td class="text-end text-nowrap">@emp.HourlyRate kr/time</td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill @(emp.IsActive ? "bg-success" : "bg-secondary")">
+                                        @(emp.IsActive ? "Ja" : "Nej")
+                                    </span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <button class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1" @onclick="() => EditEmployee(emp)">
+                                            <span class="bi bi-pencil"></span> Rediger
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary d-md-none" @onclick="() => EditEmployee(emp)" title="Rediger">
+                                            <span class="bi bi-pencil"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger d-none d-md-inline-flex align-items-center gap-1" @onclick="() => DeleteEmployee(emp)">
+                                            <span class="bi bi-trash"></span> Slet
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger d-md-none" @onclick="() => DeleteEmployee(emp)" title="Slet">
+                                            <span class="bi bi-trash"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3 d-inline-flex align-items-center gap-2">
+            <span class="bi bi-exclamation-triangle"></span>
+            @errorMessage
+        </div>
+    }
 </div>
 
-@if (employees == null)
-{
-    <p><em>Indlæser...</em></p>
-}
-else if (!employees.Any())
-{
-    <p>Der er ingen medarbejdere endnu.</p>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Navn</th>
-                <th>Email</th>
-                <th>Timesats</th>
-                <th>Aktiv</th>
-                <th>Handlinger</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var emp in employees)
-            {
-                <tr>
-                    <td>@emp.FullName</td>
-                    <td>@emp.Email</td>
-                    <td>@emp.HourlyRate kr/time</td>
-                    <td>
-                        <span class="badge @(emp.IsActive ? "bg-success" : "bg-secondary")">
-                            @(emp.IsActive ? "Ja" : "Nej")
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditEmployee(emp)">
-                            Rediger
-                        </button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
+@* Employee Modal *@
 @if (showDialog)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header @(isEditing ? "bg-info text-white" : "bg-primary text-white")">
                     <h5 class="modal-title">@(isEditing ? "Rediger medarbejder" : "Tilføj medarbejder")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseDialog"></button>
+                    <button type="button" class="btn-close @(isEditing ? "btn-close-white" : "")" aria-label="Luk" @onclick="CloseDialog"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="fullName" class="form-label">Navn</label>
-                        <input type="text" class="form-control" id="fullName" @bind="formEmployee.FullName" placeholder="Fuldt navn" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" @bind="formEmployee.Email" placeholder="email@eksempel.dk" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="hourlyRate" class="form-label">Timesats (kr)</label>
-                        <input type="number" class="form-control" id="hourlyRate" @bind="formEmployee.HourlyRate" min="0" step="0.01" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="isActive" class="form-label">
-                            <input type="checkbox" id="isActive" @bind="formEmployee.IsActive" />
-                            Aktiv
-                        </label>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="fullName" class="form-label">Navn</label>
+                            <input type="text" class="form-control" id="fullName" @bind="formEmployee.FullName" placeholder="Fuldt navn" />
+                        </div>
+                        <div class="col-12">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" @bind="formEmployee.Email" placeholder="email@eksempel.dk" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="hourlyRate" class="form-label">Timesats (kr)</label>
+                            <input type="number" class="form-control" id="hourlyRate" @bind="formEmployee.HourlyRate" min="0" step="0.01" />
+                        </div>
+                        <div class="col-12 col-md-6 d-flex align-items-center">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="isActive" @bind="formEmployee.IsActive" />
+                                <label for="isActive" class="form-check-label ms-2">Aktiv</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseDialog">Annuller</button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveEmployee" disabled="@isSaving">
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseDialog">Annuller</button>
+                    <button type="button" class="btn @(isEditing ? "btn-info text-white" : "btn-primary") d-inline-flex align-items-center gap-2" @onclick="SaveEmployee" disabled="@isSaving">
                         @if (isSaving)
                         {
                             <span class="spinner-border spinner-border-sm"></span>
                         }
-                        Gem
+                        <span class="bi bi-save"></span> Gem
                     </button>
                 </div>
             </div>
         </div>
     </div>
-}
-
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger mt-3">@errorMessage</div>
 }
 
 @code {
@@ -162,7 +204,7 @@ else
 
             if (isEditing)
             {
-                var updateRequest = new { FullName = formEmployee.FullName, Email = formEmployee.Email, HourlyRate = formEmployee.HourlyRate };
+                var updateRequest = new { FullName = formEmployee.FullName, Email = formEmployee.Email, HourlyRate = formEmployee.HourlyRate, IsActive = formEmployee.IsActive };
                 var response = await client.PutAsJsonAsync($"api/employees/{formEmployee.Id}", updateRequest);
 
                 if (!response.IsSuccessStatusCode)
@@ -195,6 +237,37 @@ else
         finally
         {
             isSaving = false;
+        }
+    }
+
+    private async Task DeleteEmployee(EmployeeDto emp)
+    {
+        var confirmed = await JsRuntime.InvokeAsync<bool>("confirm", $"Er du sikker på, at du vil slette {emp.FullName}?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        errorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            var response = await client.DeleteAsync($"api/employees/{emp.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadEmployees();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Fejl ved sletning: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl: {ex.Message}";
         }
     }
 

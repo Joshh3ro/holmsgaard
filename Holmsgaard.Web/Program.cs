@@ -12,9 +12,8 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddHttpClient("ApiClient", client =>
     {
-        // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
-        // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
-        client.BaseAddress = new("https+http://apiservice");
+        // Use localhost for local development. In Aspire orchestration, use service discovery.
+        client.BaseAddress = new("http://localhost:5510");
     });
 
 var app = builder.Build();

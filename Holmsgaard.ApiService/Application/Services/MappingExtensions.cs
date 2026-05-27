@@ -22,7 +22,7 @@ internal static class MappingExtensions
 
     public static ProductDto ToDto(this Product product)
     {
-        return new ProductDto(product.Id, product.Name, product.Sku, product.UnitPrice, product.StockQuantity, product.IsActive);
+        return new ProductDto(product.Id, product.Name, product.Sku, product.UnitPrice, product.StockQuantity, product.IsActive, product.Category);
     }
 
     public static TimeRegistrationDto ToDto(this TimeRegistration registration)

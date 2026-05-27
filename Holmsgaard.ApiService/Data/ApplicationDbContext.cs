@@ -14,6 +14,7 @@ public sealed class ApplicationDbContext : DbContext
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<TimeRegistration> TimeRegistrations => Set<TimeRegistration>();
+    public DbSet<WarehousePurchase> WarehousePurchases => Set<WarehousePurchase>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +57,9 @@ public sealed class ApplicationDbContext : DbContext
             entity.Property(e => e.Sku).IsRequired().HasMaxLength(50);
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Category)
+                  .HasConversion<string>()
+                  .HasMaxLength(50);
         });
 
         modelBuilder.Entity<TimeRegistration>(entity =>
@@ -69,6 +73,17 @@ public sealed class ApplicationDbContext : DbContext
             entity.HasOne<Activity>()
                   .WithMany()
                   .HasForeignKey(e => e.ActivityId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WarehousePurchase>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Supplier).HasMaxLength(200);
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.HasOne<Product>()
+                  .WithMany()
+                  .HasForeignKey(e => e.ProductId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
     }

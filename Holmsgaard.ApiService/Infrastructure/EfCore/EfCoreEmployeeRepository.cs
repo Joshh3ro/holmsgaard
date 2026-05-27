@@ -46,7 +46,7 @@ public sealed class EfCoreEmployeeRepository : IEmployeeRepository
         var employee = _context.Employees.Find(id);
         if (employee is not null)
         {
-            _context.Employees.Remove(employee);
+            employee.Deactivate();
             _context.SaveChanges();
         }
     }
