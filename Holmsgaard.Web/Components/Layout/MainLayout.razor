@@ -1,0 +1,64 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<div class="page">
+    @if (!IsLoginPage)
+    {
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+    }
+
+    <main>
+        @if (!IsLoginPage)
+        {
+            <div class="top-row px-4">
+                <div class="profile-chip" aria-label="Aktiv bruger">
+                    <span class="profile-avatar">HG</span>
+                    <span class="profile-copy">
+                        <span class="profile-name">Holmsgaard</span>
+                        <span class="profile-role">Dashboard</span>
+                    </span>
+                    <span class="bi bi-chevron-down" aria-hidden="true"></span>
+                </div>
+            </div>
+        }
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">x</a>
+</div>
+
+@code {
+    private bool IsLoginPage
+    {
+        get
+        {
+            var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
+            return string.IsNullOrEmpty(relativePath) || relativePath.Equals("login", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

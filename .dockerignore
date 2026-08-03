@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+.git/
+.idea/
+.vs/
+tmp/
+.env
+*.user
+*.pfx

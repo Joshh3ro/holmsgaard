@@ -1,0 +1,60 @@
+@page "/home"
+
+<PageTitle>Oversigt - Holmsgaard</PageTitle>
+
+<div class="container dashboard-page mt-4">
+    @* Header *@
+    <div class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">Holmsgaard</h1>
+            <p class="dashboard-subtitle">Intern oversigt for medarbejdere, aktiviteter og tidsregistrering.</p>
+        </div>
+        <div class="dashboard-actions">
+            <a class="btn btn-primary d-inline-flex align-items-center gap-2" href="aktiviteter?tab=time">
+                <span class="bi bi-clock-fill"></span> Registrer tid
+            </a>
+            <a class="btn btn-outline-primary d-inline-flex align-items-center gap-2" href="aktiviteter?tab=employees">
+                <span class="bi bi-people-fill"></span> Medarbejdere
+            </a>
+        </div>
+    </div>
+
+    @* Dashboard Cards *@
+    <div class="row g-3">
+        <div class="col-12 col-lg-4">
+            <div class="surface-panel h-100">
+                <div class="card-body">
+                    <h5 class="card-title d-flex align-items-center gap-2">
+                        <span class="bi bi-stack text-primary"></span> Backend
+                    </h5>
+                    <p class="text-muted card-text">API'et er bygget med Controllers, DTO'er, Commands, Queries, Services og repository-interfaces.</p>
+                    <span class="badge rounded-pill bg-success">Klar til CRUD-demo</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="surface-panel h-100">
+                <div class="card-body">
+                    <h5 class="card-title d-flex align-items-center gap-2">
+                        <span class="bi bi-layers text-primary"></span> Frontend
+                    </h5>
+                    <p class="text-muted card-text">Blazor-siderne bruger backend-data til medarbejdere og tidsregistrering.</p>
+                    <span class="badge rounded-pill bg-primary">Login-flow startet</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="surface-panel h-100">
+                <div class="card-body">
+                    <h5 class="card-title d-flex align-items-center gap-2">
+                        <span class="bi bi-arrow-right-circle text-warning"></span> Næste fokus
+                    </h5>
+                    <p class="text-muted card-text">Materialeforbrug på aktiviteter og en dokumenteret OWASP-gennemgang er næste eksamensfokus.</p>
+                    <span class="badge rounded-pill bg-warning text-dark">Planlagt</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

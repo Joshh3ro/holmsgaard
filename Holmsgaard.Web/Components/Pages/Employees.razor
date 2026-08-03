@@ -1,0 +1,323 @@
+@page "/employees"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Medarbejdere - Holmsgaard</PageTitle>
+
+<div class="container dashboard-page mt-4">
+    <div class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">Medarbejdere</h1>
+            <p class="dashboard-subtitle">Oversigt over alle medarbejdere, kontaktoplysninger og timesatser.</p>
+        </div>
+        <div class="dashboard-actions">
+            <button class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="ShowCreateDialog" disabled="@isSaving">
+                <span class="bi bi-plus-circle"></span> Tilføj medarbejder
+            </button>
+        </div>
+    </div>
+
+    @if (employees is not null)
+    {
+        <div class="stat-strip">
+            <div class="stat-tile is-accent">
+                <div class="stat-tile-label">Medarbejdere</div>
+                <div class="stat-tile-value">@employees.Count</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-tile-label">Aktive</div>
+                <div class="stat-tile-value">@employees.Count(employee => employee.IsActive)</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-tile-label">Gns. timesats</div>
+                <div class="stat-tile-value">@(employees.Any() ? employees.Average(employee => employee.HourlyRate).ToString("0") : "0")</div>
+            </div>
+        </div>
+    }
+
+    @if (employees == null)
+    {
+        <div class="surface-panel">
+            <div class="card-body text-center text-muted">
+                <em>Indlæser...</em>
+            </div>
+        </div>
+    }
+    else if (!employees.Any())
+    {
+        <div class="surface-panel">
+            <div class="card-body text-center text-muted">
+                Der er ingen medarbejdere endnu.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="surface-panel">
+            <div class="surface-panel-header">
+                <h2 class="surface-panel-title">Alle medarbejdere</h2>
+                <span class="surface-panel-meta">@employees.Count viser</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table dashboard-table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="ps-4">Navn</th>
+                            <th scope="col" class="d-none d-lg-table-cell">Kontakt</th>
+                            <th scope="col" class="text-end">Timesats</th>
+                            <th scope="col" class="text-center">Aktiv</th>
+                            <th scope="col" class="text-end pe-4">Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in employees)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="entity-cell">
+                                        <span class="entity-avatar">@GetInitials(emp.FullName)</span>
+                                        <span>
+                                            <span class="entity-title">@emp.FullName</span>
+                                            <span class="entity-subtitle d-block d-lg-none">@emp.Email</span>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-muted d-none d-lg-table-cell">@emp.Email</td>
+                                <td class="text-end text-nowrap">@emp.HourlyRate kr/time</td>
+                                <td class="text-center">
+                                    <span class="status-dot @(emp.IsActive ? "is-active" : "is-muted")">
+                                        @(emp.IsActive ? "Ja" : "Nej")
+                                    </span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <button class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => EditEmployee(emp)" title="Rediger">
+                                            <span class="bi bi-pencil"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger icon-btn" @onclick="() => DeleteEmployee(emp)" title="Slet">
+                                            <span class="bi bi-trash"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3 d-inline-flex align-items-center gap-2">
+            <span class="bi bi-exclamation-triangle"></span>
+            @errorMessage
+        </div>
+    }
+</div>
+
+@if (showDialog)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Rediger medarbejder" : "Tilføj medarbejder")</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="fullName" class="form-label">Navn</label>
+                            <input type="text" class="form-control" id="fullName" @bind="formEmployee.FullName" placeholder="Fuldt navn" />
+                        </div>
+                        <div class="col-12">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" @bind="formEmployee.Email" placeholder="email@eksempel.dk" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="hourlyRate" class="form-label">Timesats (kr)</label>
+                            <input type="number" class="form-control" id="hourlyRate" @bind="formEmployee.HourlyRate" min="0" step="0.01" />
+                        </div>
+                        <div class="col-12 col-md-6 d-flex align-items-center">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="isActive" @bind="formEmployee.IsActive" />
+                                <label for="isActive" class="form-check-label ms-2">Aktiv</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseDialog">Annuller</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SaveEmployee" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        <span class="bi bi-save"></span> Gem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<EmployeeDto>? employees;
+    private EmployeeDto formEmployee = new();
+    private bool showDialog = false;
+    private bool isEditing = false;
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployees();
+    }
+
+    private async Task LoadEmployees()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            employees = await client.GetFromJsonAsync<List<EmployeeDto>>("api/employees");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl ved indlæsning: {ex.Message}";
+        }
+    }
+
+    private void ShowCreateDialog()
+    {
+        formEmployee = new EmployeeDto(Guid.Empty, "", "", 0, true);
+        isEditing = false;
+        showDialog = true;
+        errorMessage = null;
+    }
+
+    private void EditEmployee(EmployeeDto emp)
+    {
+        formEmployee = new EmployeeDto(emp.Id, emp.FullName, emp.Email, emp.HourlyRate, emp.IsActive);
+        isEditing = true;
+        showDialog = true;
+        errorMessage = null;
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        errorMessage = null;
+    }
+
+    private async Task SaveEmployee()
+    {
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            if (isEditing)
+            {
+                var updateRequest = new { FullName = formEmployee.FullName, Email = formEmployee.Email, HourlyRate = formEmployee.HourlyRate, IsActive = formEmployee.IsActive };
+                var response = await client.PutAsJsonAsync($"api/employees/{formEmployee.Id}", updateRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    errorMessage = "Fejl ved opdatering af medarbejder.";
+                    isSaving = false;
+                    return;
+                }
+            }
+            else
+            {
+                var createRequest = new { FullName = formEmployee.FullName, Email = formEmployee.Email, HourlyRate = formEmployee.HourlyRate };
+                var response = await client.PostAsJsonAsync("api/employees", createRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    errorMessage = "Fejl ved oprettelse af medarbejder.";
+                    isSaving = false;
+                    return;
+                }
+            }
+
+            showDialog = false;
+            await LoadEmployees();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteEmployee(EmployeeDto emp)
+    {
+        var confirmed = await JsRuntime.InvokeAsync<bool>("confirm", $"Er du sikker på, at du vil slette {emp.FullName}?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        errorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            var response = await client.DeleteAsync($"api/employees/{emp.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadEmployees();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Fejl ved sletning: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl: {ex.Message}";
+        }
+    }
+
+    private static string GetInitials(string fullName)
+    {
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length switch
+        {
+            0 => "?",
+            1 => parts[0][..Math.Min(parts[0].Length, 2)].ToUpperInvariant(),
+            _ => $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+        };
+    }
+
+    public class EmployeeDto
+    {
+        public Guid Id { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public decimal HourlyRate { get; set; }
+        public bool IsActive { get; set; }
+
+        public EmployeeDto() { }
+
+        public EmployeeDto(Guid id, string fullName, string email, decimal hourlyRate, bool isActive)
+        {
+            Id = id;
+            FullName = fullName;
+            Email = email;
+            HourlyRate = hourlyRate;
+            IsActive = isActive;
+        }
+    }
+}

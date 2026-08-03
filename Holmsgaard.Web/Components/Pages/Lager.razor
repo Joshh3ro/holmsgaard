@@ -1,0 +1,914 @@
+@page "/lager"
+@rendermode InteractiveServer
+@using System.Globalization
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>Lager - Holmsgaard</PageTitle>
+
+<div class="container dashboard-page mt-4">
+    @* Header *@
+    <div class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">Lager</h1>
+            <p class="dashboard-subtitle">Hold styr på produkter, lagerbeholdning og køb.</p>
+        </div>
+        <div class="dashboard-actions">
+            <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="OpenCreateModal">
+                <span class="bi bi-plus-circle"></span> Opret produkt
+            </button>
+            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2" @onclick="RefreshData">
+                <span class="bi bi-arrow-clockwise"></span> Opdater
+            </button>
+        </div>
+    </div>
+
+    @* Stats Cards *@
+    @if (summary is not null)
+    {
+        <div class="row g-3 mb-4 inventory-stats">
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small mb-1">Produkter i alt</div>
+                        <div class="fs-4 fw-bold">@summary.TotalProducts</div>
+                        <div class="small text-muted">@summary.MaterialCount materiale · @summary.VaerktojCount værktøj</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small mb-1">Materiale</div>
+                        <div class="fs-4 fw-bold text-primary">@summary.MaterialCount</div>
+                        <div class="small text-muted">produkter</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small mb-1">Værktøj</div>
+                        <div class="fs-4 fw-bold text-success">@summary.VaerktojCount</div>
+                        <div class="small text-muted">produkter</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small mb-1">Samlet lagerbeholdning</div>
+                        <div class="fs-4 fw-bold">@summary.TotalStockQuantity</div>
+                        <div class="small text-muted">@summary.TotalStockValue.ToString("C", new CultureInfo("da-DK"))</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4 inventory-stats">
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small mb-1">Køb i alt</div>
+                        <div class="fs-4 fw-bold">@summary.TotalPurchaseCount</div>
+                        <div class="small text-muted">registreringer</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small mb-1">Samlet indkøbsværdi</div>
+                        <div class="fs-4 fw-bold text-danger">@summary.TotalPurchasedValue.ToString("C", new CultureInfo("da-DK"))</div>
+                        <div class="small text-muted">brugt på lager</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* Kategori-filter *@
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <button type="button" class="btn @(selectedCategoryFilter == null ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByCategory(null)'>Alle</button>
+        <button type="button" class="btn @(selectedCategoryFilter == "Materiale" ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByCategory("Materiale")'>Materiale</button>
+        <button type="button" class="btn @(selectedCategoryFilter == "Værktøj" ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByCategory("Værktøj")'>Værktøj</button>
+    </div>
+
+    @* Product Table *@
+    @if (isLoading)
+    {
+        <div class="card">
+            <div class="card-body text-center">
+                <span class="spinner-border spinner-border-sm"></span> Indlæser...
+            </div>
+        </div>
+    }
+    else if (!FilteredProducts.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center text-muted">
+                Ingen produkter fundet.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="surface-panel">
+            <div class="surface-panel-header">
+                <h2 class="surface-panel-title">Produkter på lager</h2>
+                <span class="surface-panel-meta">@FilteredProducts.Count() viser</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table dashboard-table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="ps-4">Produkt</th>
+                            <th scope="col">Kategori</th>
+                            <th scope="col" class="text-end">Lager</th>
+                            <th scope="col" class="text-end d-none d-lg-table-cell">Pris</th>
+                            <th scope="col" class="text-end pe-4">Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in FilteredProducts)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="entity-cell">
+                                        <span class="entity-avatar">
+                                            <span class="bi bi-box-seam"></span>
+                                        </span>
+                                        <span>
+                                            <span class="entity-title">@product.Name</span>
+                                            <span class="entity-subtitle d-block">@product.Sku</span>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-dot @(product.Category.ToString() == "Materiale" ? "is-active" : "is-muted")">
+                                        @(product.Category.ToString() == "Materiale" ? "Materiale" : "Værktøj")
+                                    </span>
+                                </td>
+                                <td class="text-end @(product.StockQuantity < 10 ? "text-danger fw-bold" : "")">
+                                    @product.StockQuantity
+                                </td>
+                                <td class="text-end text-muted d-none d-lg-table-cell">@product.UnitPrice.ToString("C", new CultureInfo("da-DK"))</td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => OpenPurchaseModal(product)" title="Registrer køb">
+                                            <span class="bi bi-cart-plus"></span>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary icon-btn" @onclick="() => OpenStockModal(product)" title="Rediger lager">
+                                            <span class="bi bi-stack"></span>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => OpenEditModal(product)" title="Rediger produkt">
+                                            <span class="bi bi-pencil"></span>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger icon-btn" @onclick="() => OpenDeleteModal(product)" title="Slet produkt">
+                                            <span class="bi bi-trash"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            @if (product.Purchases.Any())
+                            {
+                                <tr class="table-detail-row">
+                                    <td colspan="5" class="ps-4 py-2 d-md-none">
+                                        <span class="small text-muted fw-bold">Seneste køb:</span>
+                                        @foreach (var purchase in product.Purchases.Take(2))
+                                        {
+                                            <span class="badge bg-light text-dark border me-1">
+                                                @purchase.Quantity× @purchase.UnitPriceAtPurchase.ToString("C", new CultureInfo("da-DK"))
+                                            </span>
+                                        }
+                                    </td>
+                                    <td colspan="5" class="ps-4 py-2 d-none d-md-table-cell">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="small text-muted fw-bold">Seneste køb:</span>
+                                            @foreach (var purchase in product.Purchases.Take(3))
+                                            {
+                                                <span class="badge bg-light text-dark border me-1">
+                                                    @purchase.Quantity× @purchase.UnitPriceAtPurchase.ToString("C", new CultureInfo("da-DK")) (@purchase.PurchaseDate.ToString("dd-MM-yyyy"))
+                                                    @if (!string.IsNullOrEmpty(purchase.Supplier))
+                                                    {
+                                                        <span> · @purchase.Supplier</span>
+                                                    }
+                                                </span>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@* Opret Produkt Modal *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Opret nyt produkt</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="createName" class="form-label">Navn</label>
+                            <input type="text" id="createName" class="form-control" @bind="createForm.Name" placeholder="f.eks. Egetræs planker" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="createSku" class="form-label">SKU</label>
+                            <input type="text" id="createSku" class="form-control" @bind="createForm.Sku" placeholder="f.eks. TRÆ-001" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="createCategory" class="form-label">Kategori</label>
+                            <select id="createCategory" class="form-select" @bind="createForm.Category">
+                                <option value="Materiale">Materiale</option>
+                                <option value="Værktøj">Værktøj</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="createPrice" class="form-label">Enhedspris (kr)</label>
+                            <input type="number" id="createPrice" class="form-control" @bind="createForm.UnitPrice" min="0" step="0.01" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="createStock" class="form-label">Lagerbeholdning</label>
+                            <input type="number" id="createStock" class="form-control" @bind="createForm.StockQuantity" min="0" />
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(formError))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@formError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseCreateModal">Annuller</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SubmitCreate" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        <span class="bi bi-plus-circle"></span> Opret produkt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Rediger Produkt Modal *@
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rediger produkt</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedProduct is not null)
+                    {
+                        <div class="alert alert-secondary py-2 mb-3">
+                            <strong>@selectedProduct.Name</strong> · @selectedProduct.Sku
+                        </div>
+                    }
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="editName" class="form-label">Navn</label>
+                            <input type="text" id="editName" class="form-control" @bind="editForm.Name" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="editSku" class="form-label">SKU</label>
+                            <input type="text" id="editSku" class="form-control" @bind="editForm.Sku" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="editCategory" class="form-label">Kategori</label>
+                            <select id="editCategory" class="form-select" @bind="editForm.Category">
+                                <option value="Materiale">Materiale</option>
+                                <option value="Værktøj">Værktøj</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="editPrice" class="form-label">Enhedspris (kr)</label>
+                            <input type="number" id="editPrice" class="form-control" @bind="editForm.UnitPrice" min="0" step="0.01" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="editStock" class="form-label">Lagerbeholdning</label>
+                            <input type="number" id="editTail" class="form-control" @bind="editForm.StockQuantity" min="0" />
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(formError))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@formError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseEditModal">Annuller</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SubmitEdit" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        <span class="bi bi-save"></span> Gem ændringer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Slet Produkt Modal *@
+@if (showDeleteModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Slet produkt</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedProduct is not null)
+                    {
+                        <p>Er du sikker på, at du vil slette <strong>@selectedProduct.Name</strong>?</p>
+                        <p class="text-muted small mb-0">Denne handling kan ikke fortrydes.</p>
+                    }
+                    @if (!string.IsNullOrEmpty(formError))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@formError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseDeleteModal">Annuller</button>
+                    <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" @onclick="SubmitDelete" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        <span class="bi bi-trash"></span> Slet produkt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Registrer Køb Modal *@
+@if (showPurchaseModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrer køb</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="ClosePurchaseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedProduct is not null)
+                    {
+                        <div class="alert alert-secondary py-2 mb-3">
+                            <strong>@selectedProduct.Name</strong> · @selectedProduct.Sku
+                        </div>
+                    }
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="purchaseQty" class="form-label">Antal</label>
+                            <input type="number" id="purchaseQty" class="form-control" @bind="purchaseForm.Quantity" min="1" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="purchaseDate" class="form-label">Dato</label>
+                            <input type="date" id="purchaseDate" class="form-control" @bind="purchaseForm.PurchaseDate" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="purchasePrice" class="form-label">Enhed pris ved køb (kr)</label>
+                            <input type="number" id="purchasePrice" class="form-control" @bind="purchaseForm.UnitPriceAtPurchase" min="0" step="0.01" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="purchaseSupplier" class="form-label">Leverandør</label>
+                            <input type="text" id="purchaseSupplier" class="form-control" @bind="purchaseForm.Supplier" placeholder="Evt. leverandør..." />
+                        </div>
+                        <div class="col-12">
+                            <label for="purchaseNote" class="form-label">Note</label>
+                            <textarea id="purchaseNote" class="form-control" @bind="purchaseForm.Note" rows="2" placeholder="Evt. note..."></textarea>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(purchaseError))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@purchaseError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="ClosePurchaseModal">Annuller</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SubmitPurchase" disabled="@isSubmittingPurchase">
+                        @if (isSubmittingPurchase)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        <span class="bi bi-cart-plus"></span> Registrer køb
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Rediger Lager Modal *@
+@if (showStockModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rediger lagerbeholdning</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseStockModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedProduct is not null)
+                    {
+                        <div class="alert alert-secondary py-2 mb-3">
+                            <strong>@selectedProduct.Name</strong> · @selectedProduct.Sku
+                            <br />
+                            <span class="text-muted">Nuværende lagerbeholdning: @selectedProduct.StockQuantity</span>
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label for="newStock" class="form-label">Ny lagerbeholdning</label>
+                        <input type="number" id="newStock" class="form-control" @bind="stockForm.NewStockQuantity" min="0" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(stockError))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@stockError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseStockModal">Annuller</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SubmitStock" disabled="@isSubmittingStock">
+                        @if (isSubmittingStock)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        <span class="bi bi-save"></span> Gem lagerbeholdning
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProductWithPurchasesDto> products = [];
+    private InventorySummaryDto? summary;
+    private bool isLoading = true;
+    private string? selectedCategoryFilter;
+
+    // Form state
+    private bool isSubmitting;
+    private string? formError;
+
+    // Create modal
+    private bool showCreateModal;
+    private CreateFormModel createForm = new();
+
+    // Edit modal
+    private bool showEditModal;
+    private EditFormModel editForm = new();
+
+    // Delete modal
+    private bool showDeleteModal;
+
+    // Product row selection
+    private ProductWithPurchasesDto? selectedProduct;
+
+    // Purchase modal
+    private bool showPurchaseModal;
+    private bool isSubmittingPurchase;
+    private string? purchaseError;
+    private PurchaseFormModel purchaseForm = new();
+
+    // Stock modal
+    private bool showStockModal;
+    private bool isSubmittingStock;
+    private string? stockError;
+    private StockFormModel stockForm = new();
+
+    private IEnumerable<ProductWithPurchasesDto> FilteredProducts => string.IsNullOrEmpty(selectedCategoryFilter)
+        ? products
+        : products.Where(p => p.Category.ToString() == selectedCategoryFilter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            var summaryTask = client.GetFromJsonAsync<InventorySummaryDto>("api/warehouse/summary");
+            var productsTask = client.GetFromJsonAsync<List<ProductWithPurchasesDto>>("api/warehouse/products");
+
+            await Task.WhenAll(summaryTask, productsTask);
+
+            summary = summaryTask.Result;
+            products = productsTask.Result ?? [];
+        }
+        catch (Exception ex)
+        {
+            formError = $"Fejl ved indlæsning: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+    }
+
+    private void FilterByCategory(string? category)
+    {
+        selectedCategoryFilter = category;
+    }
+
+    // ===================== CREATE =====================
+
+    private void OpenCreateModal()
+    {
+        createForm = new CreateFormModel { Category = "Materiale" };
+        formError = null;
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+        formError = null;
+    }
+
+    private async Task SubmitCreate()
+    {
+        isSubmitting = true;
+        formError = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            var request = new
+            {
+                Name = createForm.Name,
+                Sku = createForm.Sku,
+                UnitPrice = createForm.UnitPrice,
+                StockQuantity = createForm.StockQuantity,
+                Category = createForm.Category == "Materiale" ? 0 : 1
+            };
+
+            var response = await client.PostAsJsonAsync("api/products", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                showCreateModal = false;
+                await LoadData();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                formError = $"Fejl: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    // ===================== EDIT =====================
+
+    private void OpenEditModal(ProductWithPurchasesDto product)
+    {
+        selectedProduct = product;
+        editForm = new EditFormModel
+        {
+            Name = product.Name,
+            Sku = product.Sku,
+            UnitPrice = product.UnitPrice,
+            StockQuantity = product.StockQuantity,
+            Category = product.Category.ToString()
+        };
+        formError = null;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        formError = null;
+    }
+
+    private async Task SubmitEdit()
+    {
+        if (selectedProduct is null) return;
+
+        isSubmitting = true;
+        formError = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            var request = new
+            {
+                Name = editForm.Name,
+                Sku = editForm.Sku,
+                UnitPrice = editForm.UnitPrice,
+                StockQuantity = editForm.StockQuantity,
+                Category = editForm.Category == "Materiale" ? 0 : 1,
+                RowVersion = selectedProduct.RowVersion
+            };
+
+            var response = await client.PutAsJsonAsync($"api/products/{selectedProduct.Id}", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                showEditModal = false;
+                await LoadData();
+            }
+            else
+            {
+                formError = response.StatusCode == System.Net.HttpStatusCode.Conflict
+                    ? "Produktet er blevet ændret af en anden bruger. Luk vinduet, genindlæs siden og prøv igen."
+                    : $"Fejl: {await response.Content.ReadAsStringAsync()}";
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    // ===================== DELETE =====================
+
+    private void OpenDeleteModal(ProductWithPurchasesDto product)
+    {
+        selectedProduct = product;
+        formError = null;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        formError = null;
+    }
+
+    private async Task SubmitDelete()
+    {
+        if (selectedProduct is null) return;
+
+        isSubmitting = true;
+        formError = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            var response = await client.DeleteAsync($"api/products/{selectedProduct.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                showDeleteModal = false;
+                await LoadData();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                formError = $"Fejl: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    // ===================== PURCHASE =====================
+
+    private void OpenPurchaseModal(ProductWithPurchasesDto product)
+    {
+        selectedProduct = product;
+        purchaseForm = new PurchaseFormModel
+        {
+            Quantity = 1,
+            PurchaseDate = DateOnly.FromDateTime(DateTime.Today),
+            UnitPriceAtPurchase = product.UnitPrice
+        };
+        purchaseError = null;
+        showPurchaseModal = true;
+    }
+
+    private void ClosePurchaseModal()
+    {
+        showPurchaseModal = false;
+        purchaseError = null;
+    }
+
+    private async Task SubmitPurchase()
+    {
+        if (selectedProduct is null) return;
+
+        isSubmittingPurchase = true;
+        purchaseError = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            var request = new
+            {
+                ProductId = selectedProduct.Id,
+                Quantity = purchaseForm.Quantity,
+                PurchaseDate = purchaseForm.PurchaseDate,
+                UnitPriceAtPurchase = purchaseForm.UnitPriceAtPurchase,
+                Supplier = purchaseForm.Supplier,
+                Note = purchaseForm.Note
+            };
+
+            var response = await client.PostAsJsonAsync("api/warehouse/purchases", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                showPurchaseModal = false;
+                await LoadData();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                purchaseError = $"Fejl: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            purchaseError = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSubmittingPurchase = false;
+        }
+    }
+
+    // ===================== STOCK =====================
+
+    private void OpenStockModal(ProductWithPurchasesDto product)
+    {
+        selectedProduct = product;
+        stockForm = new StockFormModel { NewStockQuantity = product.StockQuantity };
+        stockError = null;
+        showStockModal = true;
+    }
+
+    private void CloseStockModal()
+    {
+        showStockModal = false;
+        stockError = null;
+    }
+
+    private async Task SubmitStock()
+    {
+        if (selectedProduct is null) return;
+
+        isSubmittingStock = true;
+        stockError = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            var request = new
+            {
+                ProductId = selectedProduct.Id,
+                NewStockQuantity = stockForm.NewStockQuantity
+            };
+
+            var response = await client.PutAsJsonAsync("api/warehouse/stock", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                showStockModal = false;
+                await LoadData();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                stockError = $"Fejl: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            stockError = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSubmittingStock = false;
+        }
+    }
+
+    // ===================== FORM MODELS =====================
+
+    private sealed class CreateFormModel
+    {
+        public string Name { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public string Category { get; set; } = "Materiale";
+        public decimal UnitPrice { get; set; }
+        public int StockQuantity { get; set; }
+    }
+
+    private sealed class EditFormModel
+    {
+        public string Name { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public string Category { get; set; } = "Materiale";
+        public decimal UnitPrice { get; set; }
+        public int StockQuantity { get; set; }
+    }
+
+    private sealed class PurchaseFormModel
+    {
+        public int Quantity { get; set; } = 1;
+        public DateOnly PurchaseDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+        public decimal UnitPriceAtPurchase { get; set; }
+        public string? Supplier { get; set; }
+        public string? Note { get; set; }
+    }
+
+    private sealed class StockFormModel
+    {
+        public int NewStockQuantity { get; set; }
+    }
+
+    // ===================== LOCAL DTOs =====================
+
+    private sealed class InventorySummaryDto
+    {
+        public int TotalProducts { get; set; }
+        public int MaterialCount { get; set; }
+        public int VaerktojCount { get; set; }
+        public int TotalStockQuantity { get; set; }
+        public decimal TotalStockValue { get; set; }
+        public int TotalPurchaseCount { get; set; }
+        public decimal TotalPurchasedValue { get; set; }
+    }
+
+    private sealed class ProductWithPurchasesDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public ProductCategory Category { get; set; }
+        public int StockQuantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public bool IsActive { get; set; }
+        public string RowVersion { get; set; } = "";
+        public List<PurchaseHistoryDto> Purchases { get; set; } = [];
+    }
+
+    private sealed class PurchaseHistoryDto
+    {
+        public Guid Id { get; set; }
+        public int Quantity { get; set; }
+        public DateOnly PurchaseDate { get; set; }
+        public decimal UnitPriceAtPurchase { get; set; }
+        public string? Supplier { get; set; }
+        public string? Note { get; set; }
+        public decimal TotalValue { get; set; }
+    }
+
+    private enum ProductCategory
+    {
+        Materiale = 0,
+        Værktøj = 1
+    }
+}

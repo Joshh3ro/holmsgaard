@@ -1,0 +1,122 @@
+@page "/"
+@page "/login"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@using System.Net.Http.Headers
+
+<PageTitle>Login - Holmsgaard</PageTitle>
+
+<div class="d-flex justify-content-center align-items-center min-vh-100">
+    <div class="card shadow" style="width: 400px;">
+        <div class="card-body p-5">
+            <h3 class="card-title text-center mb-4">Holmsgaard Login</h3>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @errorMessage
+                </div>
+            }
+
+            <form @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email"
+                           class="form-control"
+                           id="email"
+                           @bind="email"
+                           @bind:event="oninput"
+                           placeholder="navn@example.com"
+                           required />
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Adgangskode</label>
+                    <input type="password"
+                           class="form-control"
+                           id="password"
+                           @bind="password"
+                           @bind:event="oninput"
+                           placeholder="Indtast adgangskode"
+                           required />
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Login
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private string? errorMessage;
+    private bool isLoading;
+
+    private async Task HandleLogin()
+    {
+        errorMessage = null;
+        isLoading = true;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            var response = await client.PostAsJsonAsync("api/auth/login", new
+            {
+                email,
+                password
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
+                if (result is not null)
+                {
+                    client.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue(result.TokenType, result.Token);
+                    var userResponse = await client.GetAsync("api/auth/me");
+                    if (!userResponse.IsSuccessStatusCode)
+                    {
+                        errorMessage = "Login-tokenet kunne ikke valideres.";
+                        return;
+                    }
+
+                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+                    await JS.InvokeVoidAsync("localStorage.setItem", "tokenExpiry", result.ExpiresAt.ToString());
+
+                    Navigation.NavigateTo("/employees", forceLoad: true);
+                }
+            }
+            else
+            {
+                errorMessage = "Ugyldig email eller adgangskode.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Der opstod en fejl: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private sealed class AuthResponse
+    {
+        public string Token { get; set; } = string.Empty;
+        public string TokenType { get; set; } = string.Empty;
+        public DateTimeOffset ExpiresAt { get; set; }
+    }
+}

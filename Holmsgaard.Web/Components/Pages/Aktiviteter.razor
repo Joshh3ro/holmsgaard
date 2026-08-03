@@ -1,0 +1,835 @@
+@page "/aktiviteter"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JsRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Aktiviteter - Holmsgaard</PageTitle>
+
+<div class="container dashboard-page mt-4">
+    <div class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">Aktiviteter</h1>
+            <p class="dashboard-subtitle">Arbejd med medarbejdere og tidsregistreringer i et samlet overblik.</p>
+        </div>
+        <div class="dashboard-actions">
+            @if (activeTab == "employees")
+            {
+                <button class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="ShowCreateDialog" disabled="@isLoadingEmployees">
+                    <span class="bi bi-plus-circle"></span> Tilføj medarbejder
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="OpenRegistrationPanel" disabled="@isLoadingTime">
+                    <span class="bi bi-plus-circle"></span> Registrer tid
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">@successMessage</div>
+    }
+
+    <ul class="nav nav-pills mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "employees" ? "active" : "")"
+                    type="button"
+                    role="tab"
+                    @onclick="SwitchToEmployeesTab">
+                <span class="bi bi-people-fill"></span> Medarbejdere
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "time" ? "active" : "")"
+                    type="button"
+                    role="tab"
+                    @onclick="SwitchToTimeTab">
+                <span class="bi bi-clock-fill"></span> Tidsregistrering
+            </button>
+        </li>
+    </ul>
+
+    @if (activeTab == "employees")
+    {
+        @if (employees is not null)
+        {
+            <div class="stat-strip">
+                <div class="stat-tile is-accent">
+                    <div class="stat-tile-label">Medarbejdere</div>
+                    <div class="stat-tile-value">@employees.Count</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-tile-label">Aktive</div>
+                    <div class="stat-tile-value">@employees.Count(employee => employee.IsActive)</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-tile-label">Gns. timesats</div>
+                    <div class="stat-tile-value">@(employees.Any() ? employees.Average(employee => employee.HourlyRate).ToString("0") : "0")</div>
+                </div>
+            </div>
+        }
+
+        @if (isLoadingEmployees)
+        {
+            <div class="surface-panel">
+                <div class="card-body text-muted"><em>Indlæser...</em></div>
+            </div>
+        }
+        else if (employees == null || !employees.Any())
+        {
+            <div class="surface-panel">
+                <div class="card-body text-muted">Der er ingen medarbejdere endnu.</div>
+            </div>
+        }
+        else
+        {
+            <div class="surface-panel">
+                <div class="surface-panel-header">
+                    <h2 class="surface-panel-title">Medarbejdere</h2>
+                    <span class="surface-panel-meta">@employees.Count viser</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dashboard-table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="ps-4">Navn</th>
+                                <th scope="col" class="d-none d-lg-table-cell">Kontakt</th>
+                                <th scope="col" class="text-end">Timesats</th>
+                                <th scope="col" class="text-center">Aktiv</th>
+                                <th scope="col" class="text-end pe-4">Handlinger</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in employees)
+                            {
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="entity-cell">
+                                            <span class="entity-avatar">@GetInitials(emp.FullName)</span>
+                                            <span>
+                                                <span class="entity-title">@emp.FullName</span>
+                                                <span class="entity-subtitle d-block d-lg-none">@emp.Email</span>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="text-muted d-none d-lg-table-cell">@emp.Email</td>
+                                    <td class="text-end text-nowrap">@emp.HourlyRate kr/time</td>
+                                    <td class="text-center">
+                                        <span class="status-dot @(emp.IsActive ? "is-active" : "is-muted")">
+                                            @(emp.IsActive ? "Ja" : "Nej")
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="d-flex justify-content-end gap-1">
+                                            <button class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => EditEmployee(emp)" title="Rediger">
+                                                <span class="bi bi-pencil-square"></span>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger icon-btn" @onclick="() => DeleteEmployee(emp)" title="Slet">
+                                                <span class="bi bi-trash"></span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(employeeErrorMessage))
+        {
+            <div class="alert alert-danger mt-3">@employeeErrorMessage</div>
+        }
+    }
+
+    @if (activeTab == "time")
+    {
+        @if (isLoadingTime)
+        {
+            <div class="surface-panel">
+                <div class="card-body text-muted"><em>Indlæser tidsregistreringer...</em></div>
+            </div>
+        }
+        else
+        {
+            <div class="stat-strip">
+                <div class="stat-tile is-accent">
+                    <div class="stat-tile-label">Registreringer</div>
+                    <div class="stat-tile-value">@timeRegistrations.Count</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-tile-label">Timer i alt</div>
+                    <div class="stat-tile-value">@timeRegistrations.Sum(registration => registration.Hours).ToString("0.#")</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-tile-label">Valgt medarbejder</div>
+                    <div class="stat-tile-value">@SelectedRegistrations.Sum(registration => registration.Hours).ToString("0.#")</div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-12 col-lg-4">
+                    <div class="surface-panel h-100">
+                        <div class="surface-panel-header">
+                            <h2 class="surface-panel-title">Medarbejdere</h2>
+                            <span class="surface-panel-meta">@timeEmployees.Count</span>
+                        </div>
+                        <div class="employee-picker">
+                            @foreach (var employee in timeEmployees)
+                            {
+                                var summary = GetEmployeeSummary(employee.Id);
+                                <button type="button"
+                                        class="employee-picker-item @(selectedEmployeeId == employee.Id ? "active" : "")"
+                                        @onclick="() => SelectEmployee(employee.Id)">
+                                    <div class="d-flex justify-content-between align-items-center gap-3">
+                                        <div class="entity-cell">
+                                            <span class="entity-avatar">@GetInitials(employee.FullName)</span>
+                                            <span>
+                                                <span class="entity-title">@employee.FullName</span>
+                                                <span class="entity-subtitle d-block">@summary.RegistrationCount registreringer</span>
+                                            </span>
+                                        </div>
+                                        <span class="status-dot is-active">@summary.TotalHours.ToString("0.#") t</span>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-8">
+                    <div class="surface-panel h-100">
+                        <div class="surface-panel-header">
+                            <div>
+                                <h2 class="surface-panel-title">@SelectedEmployeeName</h2>
+                                <span class="surface-panel-meta">Registrerede timer</span>
+                            </div>
+                            <span class="surface-panel-meta">
+                                @SelectedRegistrations.Sum(registration => registration.Hours).ToString("0.##") timer · @SelectedRegistrations.Count registreringer
+                            </span>
+                        </div>
+
+                        @if (!SelectedRegistrations.Any())
+                        {
+                            <div class="card-body">
+                                <p class="text-muted mb-0">Der er ingen tidsregistreringer for den valgte medarbejder endnu.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table dashboard-table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" class="ps-4">Aktivitet</th>
+                                            <th scope="col">Dato</th>
+                                            <th scope="col" class="text-end">Timer</th>
+                                            <th scope="col" class="d-none d-lg-table-cell">Note</th>
+                                            <th scope="col" class="text-end pe-4">Handlinger</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var registration in SelectedRegistrations)
+                                        {
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <div class="entity-cell">
+                                                        <span class="entity-avatar"><span class="bi bi-clock-history"></span></span>
+                                                        <span>
+                                                            <span class="entity-title">@GetActivityTitle(registration.ActivityId)</span>
+                                                            <span class="entity-subtitle d-block d-lg-none">@(!string.IsNullOrWhiteSpace(registration.Note) ? registration.Note : "Ingen note")</span>
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-nowrap">@registration.WorkDate.ToString("dd-MM-yyyy")</td>
+                                                <td class="text-end text-nowrap fw-semibold">@registration.Hours.ToString("0.##") t</td>
+                                                <td class="text-muted d-none d-lg-table-cell">@(!string.IsNullOrWhiteSpace(registration.Note) ? registration.Note : "-")</td>
+                                                <td class="text-end pe-4">
+                                                    <div class="d-flex justify-content-end gap-1">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => OpenEditPanel(registration)" title="Rediger">
+                                                            <span class="bi bi-pencil-square"></span>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger icon-btn" @onclick="() => DeleteRegistration(registration)" title="Slet">
+                                                            <span class="bi bi-trash"></span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (showDialog)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditingEmployee ? "Rediger medarbejder" : "Tilføj medarbejder")</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="fullName" class="form-label">Navn</label>
+                            <input type="text" class="form-control" id="fullName" @bind="formEmployee.FullName" placeholder="Fuldt navn" />
+                        </div>
+                        <div class="col-12">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" @bind="formEmployee.Email" placeholder="email@eksempel.dk" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="hourlyRate" class="form-label">Timesats (kr)</label>
+                            <input type="number" class="form-control" id="hourlyRate" @bind="formEmployee.HourlyRate" min="0" step="0.01" />
+                        </div>
+                        <div class="col-12 d-flex align-items-center">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="isActive" @bind="formEmployee.IsActive" />
+                                <label for="isActive" class="form-check-label">Aktiv</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseDialog">Annuller</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SaveEmployee" disabled="@isSavingEmployee">
+                        @if (isSavingEmployee)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        Gem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showRegistrationPanel)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">@PanelTitle</h5>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseRegistrationPanel"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="timeEmployee" class="form-label">Medarbejder</label>
+                            <select id="timeEmployee" class="form-select" @bind="timeFormModel.EmployeeId">
+                                <option value="">-- Vælg medarbejder --</option>
+                                @foreach (var employee in timeEmployees)
+                                {
+                                    <option value="@employee.Id">@employee.FullName</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="activity" class="form-label">Aktivitet</label>
+                            <select id="activity" class="form-select" @bind="timeFormModel.ActivityId">
+                                <option value="">-- Vælg aktivitet --</option>
+                                @foreach (var activity in activities)
+                                {
+                                    <option value="@activity.Id">@activity.Title</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="timeDate" class="form-label">Dato</label>
+                            <input type="date" id="timeDate" class="form-control" @bind="timeFormModel.WorkDate" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="timeHours" class="form-label">Timer</label>
+                            <input type="number" id="timeHours" class="form-control" @bind="timeFormModel.Hours" min="0" max="24" step="0.25" />
+                        </div>
+
+                        <div class="col-12">
+                            <label for="timeNote" class="form-label">Note</label>
+                            <textarea id="timeNote" class="form-control" @bind="timeFormModel.Note" rows="3" placeholder="Evt. note til registreringen..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseRegistrationPanel">Annuller</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="HandleTimeSubmit" disabled="@isSubmittingTime">
+                        @if (isSubmittingTime)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        @SubmitButtonText
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string activeTab = "employees";
+
+    [SupplyParameterFromQuery(Name = "tab")]
+    [Parameter]
+    public string? Tab { get; set; }
+
+    private List<EmployeeDto>? employees;
+    private EmployeeDto formEmployee = new();
+    private bool showDialog = false;
+    private bool isEditingEmployee = false;
+    private bool isSavingEmployee = false;
+    private bool isLoadingEmployees = false;
+    private string? employeeErrorMessage;
+
+    private List<TimeEmployeeDto> timeEmployees = [];
+    private List<ActivityDto> activities = [];
+    private List<TimeRegistrationDto> timeRegistrations = [];
+    private Guid? selectedEmployeeId;
+    private Guid? editingRegistrationId;
+    private bool isLoadingTime = false;
+    private bool isSubmittingTime = false;
+    private bool showRegistrationPanel = false;
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    private TimeRegistrationFormModel timeFormModel = new();
+
+    private bool IsEditingTime => editingRegistrationId.HasValue;
+    private string PanelTitle => IsEditingTime ? "Rediger tid" : "Registrer tid";
+    private string SubmitButtonText => IsEditingTime ? "Gem ændringer" : "Gem tid";
+
+    private IReadOnlyCollection<TimeRegistrationDto> SelectedRegistrations => selectedEmployeeId is null
+        ? []
+        : timeRegistrations
+            .Where(registration => registration.EmployeeId == selectedEmployeeId)
+            .OrderByDescending(registration => registration.WorkDate)
+            .ThenBy(registration => registration.Id)
+            .ToArray();
+
+    private string SelectedEmployeeName => timeEmployees.FirstOrDefault(employee => employee.Id == selectedEmployeeId)?.FullName ?? "Vælg en medarbejder";
+
+    private async Task SwitchToEmployeesTab()
+    {
+        activeTab = "employees";
+        if (employees == null)
+        {
+            await LoadEmployeesData();
+        }
+    }
+
+    private async Task SwitchToTimeTab()
+    {
+        activeTab = "time";
+        if (timeEmployees.Count == 0)
+        {
+            await LoadTimeData();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(Tab, "time", StringComparison.OrdinalIgnoreCase))
+        {
+            if (activeTab != "time")
+            {
+                activeTab = "time";
+            }
+
+            if (timeEmployees.Count == 0)
+            {
+                await LoadTimeData();
+            }
+            return;
+        }
+
+        if (activeTab != "employees")
+        {
+            activeTab = "employees";
+        }
+
+        if (employees == null)
+        {
+            await LoadEmployeesData();
+        }
+    }
+
+    private async Task LoadEmployeesData()
+    {
+        isLoadingEmployees = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            employees = await client.GetFromJsonAsync<List<EmployeeDto>>("api/employees");
+        }
+        catch (Exception ex)
+        {
+            employeeErrorMessage = $"Fejl ved indlæsning: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingEmployees = false;
+        }
+    }
+
+    private void ShowCreateDialog()
+    {
+        formEmployee = new EmployeeDto(Guid.Empty, "", "", 0, true);
+        isEditingEmployee = false;
+        showDialog = true;
+        employeeErrorMessage = null;
+    }
+
+    private void EditEmployee(EmployeeDto emp)
+    {
+        formEmployee = new EmployeeDto(emp.Id, emp.FullName, emp.Email, emp.HourlyRate, emp.IsActive);
+        isEditingEmployee = true;
+        showDialog = true;
+        employeeErrorMessage = null;
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        employeeErrorMessage = null;
+    }
+
+    private async Task SaveEmployee()
+    {
+        isSavingEmployee = true;
+        employeeErrorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            if (isEditingEmployee)
+            {
+                var updateRequest = new { FullName = formEmployee.FullName, Email = formEmployee.Email, HourlyRate = formEmployee.HourlyRate, IsActive = formEmployee.IsActive };
+                var response = await client.PutAsJsonAsync($"api/employees/{formEmployee.Id}", updateRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    employeeErrorMessage = "Fejl ved opdatering af medarbejder.";
+                    isSavingEmployee = false;
+                    return;
+                }
+            }
+            else
+            {
+                var createRequest = new { FullName = formEmployee.FullName, Email = formEmployee.Email, HourlyRate = formEmployee.HourlyRate };
+                var response = await client.PostAsJsonAsync("api/employees", createRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    employeeErrorMessage = "Fejl ved oprettelse af medarbejder.";
+                    isSavingEmployee = false;
+                    return;
+                }
+            }
+
+            showDialog = false;
+            await LoadEmployeesData();
+        }
+        catch (Exception ex)
+        {
+            employeeErrorMessage = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSavingEmployee = false;
+        }
+    }
+
+    private async Task DeleteEmployee(EmployeeDto emp)
+    {
+        var confirmed = await JsRuntime.InvokeAsync<bool>("confirm", $"Er du sikker på, at du vil slette {emp.FullName}?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        employeeErrorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            var response = await client.DeleteAsync($"api/employees/{emp.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Medarbejderen er slettet.";
+                await LoadEmployeesData();
+                await LoadTimeData();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                employeeErrorMessage = $"Fejl ved sletning: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            employeeErrorMessage = $"Fejl: {ex.Message}";
+        }
+    }
+
+    private async Task LoadTimeData()
+    {
+        isLoadingTime = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            var employeeTask = client.GetFromJsonAsync<List<TimeEmployeeDto>>("api/employees");
+            var activityTask = client.GetFromJsonAsync<List<ActivityDto>>("api/activities");
+            var registrationTask = client.GetFromJsonAsync<List<TimeRegistrationDto>>("api/time-registrations");
+
+            await Task.WhenAll(employeeTask, activityTask, registrationTask);
+
+            timeEmployees = employeeTask.Result ?? [];
+            activities = activityTask.Result ?? [];
+            timeRegistrations = registrationTask.Result ?? [];
+            selectedEmployeeId ??= timeEmployees.FirstOrDefault()?.Id;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl ved indlæsning: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingTime = false;
+        }
+    }
+
+    private void SelectEmployee(Guid employeeId)
+    {
+        selectedEmployeeId = employeeId;
+    }
+
+    private void OpenRegistrationPanel()
+    {
+        editingRegistrationId = null;
+        timeFormModel = new TimeRegistrationFormModel
+        {
+            EmployeeId = selectedEmployeeId?.ToString() ?? "",
+            WorkDate = DateTime.Today,
+            Hours = 1.0m
+        };
+        successMessage = null;
+        errorMessage = null;
+        showRegistrationPanel = true;
+    }
+
+    private void OpenEditPanel(TimeRegistrationDto registration)
+    {
+        editingRegistrationId = registration.Id;
+        timeFormModel = new TimeRegistrationFormModel
+        {
+            EmployeeId = registration.EmployeeId.ToString(),
+            ActivityId = registration.ActivityId.ToString(),
+            WorkDate = registration.WorkDate.ToDateTime(TimeOnly.MinValue),
+            Hours = registration.Hours,
+            Note = registration.Note
+        };
+        successMessage = null;
+        errorMessage = null;
+        showRegistrationPanel = true;
+    }
+
+    private void CloseRegistrationPanel()
+    {
+        showRegistrationPanel = false;
+        editingRegistrationId = null;
+        errorMessage = null;
+    }
+
+    private async Task HandleTimeSubmit()
+    {
+        isSubmittingTime = true;
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(timeFormModel.EmployeeId) || string.IsNullOrWhiteSpace(timeFormModel.ActivityId))
+            {
+                errorMessage = "Vælg både medarbejder og aktivitet.";
+                return;
+            }
+
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            var request = new
+            {
+                EmployeeId = Guid.Parse(timeFormModel.EmployeeId),
+                ActivityId = Guid.Parse(timeFormModel.ActivityId),
+                WorkDate = DateOnly.FromDateTime(timeFormModel.WorkDate),
+                Hours = timeFormModel.Hours,
+                Note = timeFormModel.Note ?? string.Empty
+            };
+
+            var response = IsEditingTime
+                ? await client.PutAsJsonAsync($"api/time-registrations/{editingRegistrationId}", request)
+                : await client.PostAsJsonAsync("api/time-registrations", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = IsEditingTime ? "Tidsregistreringen er opdateret." : $"{timeFormModel.Hours:0.##} timer er registreret.";
+                selectedEmployeeId = request.EmployeeId;
+                showRegistrationPanel = false;
+                editingRegistrationId = null;
+                await LoadRegistrations();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Fejl ved gemning: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSubmittingTime = false;
+        }
+    }
+
+    private async Task DeleteRegistration(TimeRegistrationDto registration)
+    {
+        var confirmed = await JsRuntime.InvokeAsync<bool>("confirm", $"Slet tidsregistreringen på {registration.Hours:0.##} timer?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            var response = await client.DeleteAsync($"api/time-registrations/{registration.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Tidsregistreringen er slettet.";
+                await LoadRegistrations();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Fejl ved sletning: {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fejl: {ex.Message}";
+        }
+    }
+
+    private async Task LoadRegistrations()
+    {
+        var client = HttpClientFactory.CreateClient("ApiClient");
+        timeRegistrations = await client.GetFromJsonAsync<List<TimeRegistrationDto>>("api/time-registrations") ?? [];
+    }
+
+    private EmployeeSummary GetEmployeeSummary(Guid employeeId)
+    {
+        var registrations = timeRegistrations.Where(registration => registration.EmployeeId == employeeId).ToArray();
+        return new EmployeeSummary(registrations.Sum(registration => registration.Hours), registrations.Length);
+    }
+
+    private string GetActivityTitle(Guid activityId)
+    {
+        return activities.FirstOrDefault(activity => activity.Id == activityId)?.Title ?? "Ukendt aktivitet";
+    }
+
+    private static string GetInitials(string fullName)
+    {
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length switch
+        {
+            0 => "?",
+            1 => parts[0][..Math.Min(parts[0].Length, 2)].ToUpperInvariant(),
+            _ => $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+        };
+    }
+
+    private sealed record EmployeeSummary(decimal TotalHours, int RegistrationCount);
+
+    public class EmployeeDto
+    {
+        public Guid Id { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public decimal HourlyRate { get; set; }
+        public bool IsActive { get; set; }
+
+        public EmployeeDto() { }
+
+        public EmployeeDto(Guid id, string fullName, string email, decimal hourlyRate, bool isActive)
+        {
+            Id = id;
+            FullName = fullName;
+            Email = email;
+            HourlyRate = hourlyRate;
+            IsActive = isActive;
+        }
+    }
+
+    public class TimeEmployeeDto
+    {
+        public Guid Id { get; set; }
+        public string FullName { get; set; } = "";
+        public decimal HourlyRate { get; set; }
+    }
+
+    public class ActivityDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = "";
+    }
+
+    public class TimeRegistrationDto
+    {
+        public Guid Id { get; set; }
+        public Guid EmployeeId { get; set; }
+        public Guid ActivityId { get; set; }
+        public DateOnly WorkDate { get; set; }
+        public decimal Hours { get; set; }
+        public string Note { get; set; } = "";
+    }
+
+    public class TimeRegistrationFormModel
+    {
+        public string? EmployeeId { get; set; }
+        public string? ActivityId { get; set; }
+        public DateTime WorkDate { get; set; } = DateTime.Today;
+        public decimal Hours { get; set; } = 1.0m;
+        public string? Note { get; set; }
+    }
+}
