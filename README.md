@@ -129,14 +129,4 @@ Smoke testen i `Holmsgaard.Tests/WebTests.cs` er markeret som skipped, fordi den
 - `/api/auth/register`
 - `/api/auth/me` (kræver bearer token)
 
-## Eksamensdemonstration
-
-En kort, sammenhængende demonstration kan følge denne rækkefølge:
-
-1. Vis en kunde og opret en aktivitet for kunden.
-2. Registrér en medarbejders timer på aktiviteten.
-3. Opret eller redigér et produkt på lageret og registrér et indkøb.
-4. Vis at data stadig findes efter genindlæsning.
-5. Vis REST-ruterne i OpenAPI og kør testpakken.
-
 Ved login udsteder API'et et valideret JWT. Demonstrér authorization ved at kalde `GET /api/auth/me` først uden token og derefter med `Authorization: Bearer <token>`.
