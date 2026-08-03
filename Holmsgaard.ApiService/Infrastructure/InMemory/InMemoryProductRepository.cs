@@ -58,7 +58,7 @@ public sealed class InMemoryProductRepository : IProductRepository
         }
     }
 
-    public void SaveChanges()
+    public void SaveChanges(Product product, byte[] expectedRowVersion)
     {
     }
 }

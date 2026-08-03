@@ -37,7 +37,7 @@ public sealed class ProductService(IProductRepository productRepository)
         }
 
         product.Update(command.Name, command.Sku, command.UnitPrice, command.StockQuantity, command.Category);
-        productRepository.SaveChanges();
+        productRepository.SaveChanges(product, command.RowVersion);
         return product.ToDto();
     }
 

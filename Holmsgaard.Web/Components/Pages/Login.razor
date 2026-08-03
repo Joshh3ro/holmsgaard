@@ -4,6 +4,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@using System.Net.Http.Headers
 
 <PageTitle>Login - Holmsgaard</PageTitle>
 
@@ -19,13 +20,14 @@
                 </div>
             }
 
-            <form @onsubmit="HandleLogin">
+            <form @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
                 <div class="mb-3">
                     <label for="email" class="form-label">Email</label>
                     <input type="email"
                            class="form-control"
                            id="email"
                            @bind="email"
+                           @bind:event="oninput"
                            placeholder="navn@example.com"
                            required />
                 </div>
@@ -36,6 +38,7 @@
                            class="form-control"
                            id="password"
                            @bind="password"
+                           @bind:event="oninput"
                            placeholder="Indtast adgangskode"
                            required />
                 </div>
@@ -80,6 +83,15 @@
                 var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
                 if (result is not null)
                 {
+                    client.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue(result.TokenType, result.Token);
+                    var userResponse = await client.GetAsync("api/auth/me");
+                    if (!userResponse.IsSuccessStatusCode)
+                    {
+                        errorMessage = "Login-tokenet kunne ikke valideres.";
+                        return;
+                    }
+
                     await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
                     await JS.InvokeVoidAsync("localStorage.setItem", "tokenExpiry", result.ExpiresAt.ToString());
 

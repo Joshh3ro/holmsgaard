@@ -41,6 +41,7 @@ public sealed class WarehouseService(IWarehouseRepository warehouseRepository)
                 p.StockQuantity,
                 p.UnitPrice,
                 p.IsActive,
+                Convert.ToBase64String(p.RowVersion),
                 purchases
                     .Where(wp => wp.ProductId == p.Id)
                     .Select(wp => new PurchaseHistoryDto(
@@ -113,6 +114,7 @@ public sealed class WarehouseService(IWarehouseRepository warehouseRepository)
             updated.StockQuantity,
             updated.UnitPrice,
             updated.IsActive,
+            Convert.ToBase64String(updated.RowVersion),
             purchases
                 .Select(wp => new PurchaseHistoryDto(
                     wp.Id,

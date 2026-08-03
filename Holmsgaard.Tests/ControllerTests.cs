@@ -3,7 +3,11 @@ using Holmsgaard.ApiService.Application.Services;
 using Holmsgaard.ApiService.Controllers;
 using Holmsgaard.ApiService.Contracts.Dto;
 using Holmsgaard.ApiService.Infrastructure.InMemory;
+using Holmsgaard.ApiService.Domain.Entities;
+using Holmsgaard.ApiService.Security;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Holmsgaard.Tests;
 
@@ -67,12 +71,55 @@ public class ControllerTests
     public void AuthRegisterCreatesEmployeeAndReturnsOk()
     {
         var repo = new InMemoryEmployeeRepository();
-        var controller = new AuthController(repo);
+        var controller = CreateAuthController(repo);
 
         var response = controller.Register(new RegisterRequest("Test User", "test@hgaps.dk", "hemmeligt123"));
 
         var result = Assert.IsType<OkObjectResult>(response.Result);
         var authResponse = Assert.IsType<AuthResponse>(result.Value);
         Assert.Equal("Bearer", authResponse.TokenType);
+        Assert.NotEmpty(authResponse.Token);
+
+        var employee = Assert.Single(repo.GetAll(), employee => employee.Email == "test@hgaps.dk");
+        Assert.NotEqual("hemmeligt123", employee.PasswordHash);
+    }
+
+    [Fact]
+    public void AuthLoginReturnsJwtForCorrectPassword()
+    {
+        var repo = new InMemoryEmployeeRepository();
+        var controller = CreateAuthController(repo);
+        controller.Register(new RegisterRequest("Login User", "login@hgaps.dk", "hemmeligt123"));
+
+        var response = controller.Login(new LoginRequest("login@hgaps.dk", "hemmeligt123"));
+
+        var result = Assert.IsType<OkObjectResult>(response.Result);
+        var authResponse = Assert.IsType<AuthResponse>(result.Value);
+        Assert.Equal(3, authResponse.Token.Split('.').Length);
+    }
+
+    [Fact]
+    public void AuthLoginRejectsWrongPassword()
+    {
+        var repo = new InMemoryEmployeeRepository();
+        var controller = CreateAuthController(repo);
+        controller.Register(new RegisterRequest("Login User", "login@hgaps.dk", "hemmeligt123"));
+
+        var response = controller.Login(new LoginRequest("login@hgaps.dk", "forkert123"));
+
+        Assert.IsType<UnauthorizedObjectResult>(response.Result);
+    }
+
+    private static AuthController CreateAuthController(InMemoryEmployeeRepository repository)
+    {
+        var options = Options.Create(new JwtOptions
+        {
+            Key = AuthIntegrationTests.TestSigningKey
+        });
+
+        return new AuthController(
+            repository,
+            new PasswordHasher<Employee>(),
+            new JwtTokenService(options));
     }
 }

@@ -6,22 +6,40 @@
 
 <PageTitle>Medarbejdere - Holmsgaard</PageTitle>
 
-<div class="container mt-4">
-    @* Header *@
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+<div class="container dashboard-page mt-4">
+    <div class="dashboard-header">
         <div>
-            <h2 class="mb-1">Medarbejdere</h2>
-            <p class="text-muted mb-0">Oversigt over alle medarbejdere og deres timesatser.</p>
+            <h1 class="dashboard-title">Medarbejdere</h1>
+            <p class="dashboard-subtitle">Oversigt over alle medarbejdere, kontaktoplysninger og timesatser.</p>
         </div>
-        <button class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="ShowCreateDialog" disabled="@isSaving">
-            <span class="bi bi-plus-circle"></span> Tilføj medarbejder
-        </button>
+        <div class="dashboard-actions">
+            <button class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="ShowCreateDialog" disabled="@isSaving">
+                <span class="bi bi-plus-circle"></span> Tilføj medarbejder
+            </button>
+        </div>
     </div>
 
-    @* Employee Table *@
+    @if (employees is not null)
+    {
+        <div class="stat-strip">
+            <div class="stat-tile is-accent">
+                <div class="stat-tile-label">Medarbejdere</div>
+                <div class="stat-tile-value">@employees.Count</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-tile-label">Aktive</div>
+                <div class="stat-tile-value">@employees.Count(employee => employee.IsActive)</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-tile-label">Gns. timesats</div>
+                <div class="stat-tile-value">@(employees.Any() ? employees.Average(employee => employee.HourlyRate).ToString("0") : "0")</div>
+            </div>
+        </div>
+    }
+
     @if (employees == null)
     {
-        <div class="card border-0 shadow-sm">
+        <div class="surface-panel">
             <div class="card-body text-center text-muted">
                 <em>Indlæser...</em>
             </div>
@@ -29,7 +47,7 @@
     }
     else if (!employees.Any())
     {
-        <div class="card border-0 shadow-sm">
+        <div class="surface-panel">
             <div class="card-body text-center text-muted">
                 Der er ingen medarbejdere endnu.
             </div>
@@ -37,17 +55,17 @@
     }
     else
     {
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <strong>Alle medarbejdere</strong>
-                <span class="text-muted small">(@employees.Count viser)</span>
+        <div class="surface-panel">
+            <div class="surface-panel-header">
+                <h2 class="surface-panel-title">Alle medarbejdere</h2>
+                <span class="surface-panel-meta">@employees.Count viser</span>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table dashboard-table table-hover align-middle">
+                    <thead>
                         <tr>
                             <th scope="col" class="ps-4">Navn</th>
-                            <th scope="col" class="d-none d-lg-table-cell">Email</th>
+                            <th scope="col" class="d-none d-lg-table-cell">Kontakt</th>
                             <th scope="col" class="text-end">Timesats</th>
                             <th scope="col" class="text-center">Aktiv</th>
                             <th scope="col" class="text-end pe-4">Handlinger</th>
@@ -57,26 +75,28 @@
                         @foreach (var emp in employees)
                         {
                             <tr>
-                                <td class="ps-4 fw-medium">@emp.FullName</td>
+                                <td class="ps-4">
+                                    <div class="entity-cell">
+                                        <span class="entity-avatar">@GetInitials(emp.FullName)</span>
+                                        <span>
+                                            <span class="entity-title">@emp.FullName</span>
+                                            <span class="entity-subtitle d-block d-lg-none">@emp.Email</span>
+                                        </span>
+                                    </div>
+                                </td>
                                 <td class="text-muted d-none d-lg-table-cell">@emp.Email</td>
                                 <td class="text-end text-nowrap">@emp.HourlyRate kr/time</td>
                                 <td class="text-center">
-                                    <span class="badge rounded-pill @(emp.IsActive ? "bg-success" : "bg-secondary")">
+                                    <span class="status-dot @(emp.IsActive ? "is-active" : "is-muted")">
                                         @(emp.IsActive ? "Ja" : "Nej")
                                     </span>
                                 </td>
                                 <td class="text-end pe-4">
                                     <div class="d-flex justify-content-end gap-1">
-                                        <button class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1" @onclick="() => EditEmployee(emp)">
-                                            <span class="bi bi-pencil"></span> Rediger
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-primary d-md-none" @onclick="() => EditEmployee(emp)" title="Rediger">
+                                        <button class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => EditEmployee(emp)" title="Rediger">
                                             <span class="bi bi-pencil"></span>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-danger d-none d-md-inline-flex align-items-center gap-1" @onclick="() => DeleteEmployee(emp)">
-                                            <span class="bi bi-trash"></span> Slet
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger d-md-none" @onclick="() => DeleteEmployee(emp)" title="Slet">
+                                        <button class="btn btn-sm btn-outline-danger icon-btn" @onclick="() => DeleteEmployee(emp)" title="Slet">
                                             <span class="bi bi-trash"></span>
                                         </button>
                                     </div>
@@ -98,15 +118,14 @@
     }
 </div>
 
-@* Employee Modal *@
 @if (showDialog)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header @(isEditing ? "bg-info text-white" : "bg-primary text-white")">
+                <div class="modal-header">
                     <h5 class="modal-title">@(isEditing ? "Rediger medarbejder" : "Tilføj medarbejder")</h5>
-                    <button type="button" class="btn-close @(isEditing ? "btn-close-white" : "")" aria-label="Luk" @onclick="CloseDialog"></button>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseDialog"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
@@ -130,9 +149,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CloseDialog">Annuller</button>
-                    <button type="button" class="btn @(isEditing ? "btn-info text-white" : "btn-primary") d-inline-flex align-items-center gap-2" @onclick="SaveEmployee" disabled="@isSaving">
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SaveEmployee" disabled="@isSaving">
                         @if (isSaving)
                         {
                             <span class="spinner-border spinner-border-sm"></span>
@@ -269,6 +288,17 @@
         {
             errorMessage = $"Fejl: {ex.Message}";
         }
+    }
+
+    private static string GetInitials(string fullName)
+    {
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length switch
+        {
+            0 => "?",
+            1 => parts[0][..Math.Min(parts[0].Length, 2)].ToUpperInvariant(),
+            _ => $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+        };
     }
 
     public class EmployeeDto

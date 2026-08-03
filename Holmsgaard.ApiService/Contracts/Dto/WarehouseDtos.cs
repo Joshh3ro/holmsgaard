@@ -19,6 +19,7 @@ public sealed record ProductWithPurchasesDto(
     int StockQuantity,
     decimal UnitPrice,
     bool IsActive,
+    string RowVersion,
     List<PurchaseHistoryDto> Purchases);
 
 public sealed record PurchaseHistoryDto(

@@ -5,18 +5,18 @@
 
 <PageTitle>Lager - Holmsgaard</PageTitle>
 
-<div class="container mt-4">
+<div class="container dashboard-page mt-4">
     @* Header *@
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="dashboard-header">
         <div>
-            <h2 class="mb-1">Lager</h2>
-            <p class="text-muted mb-0">Hold styr på produkter, lagerbeholdning og køb.</p>
+            <h1 class="dashboard-title">Lager</h1>
+            <p class="dashboard-subtitle">Hold styr på produkter, lagerbeholdning og køb.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="dashboard-actions">
             <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="OpenCreateModal">
                 <span class="bi bi-plus-circle"></span> Opret produkt
             </button>
-            <button type="button" class="btn btn-outline-primary" @onclick="RefreshData">
+            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2" @onclick="RefreshData">
                 <span class="bi bi-arrow-clockwise"></span> Opdater
             </button>
         </div>
@@ -25,7 +25,7 @@
     @* Stats Cards *@
     @if (summary is not null)
     {
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4 inventory-stats">
             <div class="col-6 col-lg-3">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body text-center">
@@ -64,7 +64,7 @@
             </div>
         </div>
 
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4 inventory-stats">
             <div class="col-6 col-lg-3">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body text-center">
@@ -87,7 +87,7 @@
     }
 
     @* Kategori-filter *@
-    <div class="d-flex gap-2 mb-3">
+    <div class="d-flex flex-wrap gap-2 mb-3">
         <button type="button" class="btn @(selectedCategoryFilter == null ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByCategory(null)'>Alle</button>
         <button type="button" class="btn @(selectedCategoryFilter == "Materiale" ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByCategory("Materiale")'>Materiale</button>
         <button type="button" class="btn @(selectedCategoryFilter == "Værktøj" ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByCategory("Værktøj")'>Værktøj</button>
@@ -112,17 +112,16 @@
     }
     else
     {
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <strong>Produkter på lager</strong>
-                <span class="text-muted small">(@FilteredProducts.Count() viser)</span>
+        <div class="surface-panel">
+            <div class="surface-panel-header">
+                <h2 class="surface-panel-title">Produkter på lager</h2>
+                <span class="surface-panel-meta">@FilteredProducts.Count() viser</span>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table dashboard-table table-hover align-middle">
+                    <thead>
                         <tr>
-                            <th scope="col" class="ps-4">SKU</th>
-                            <th scope="col">Navn</th>
+                            <th scope="col" class="ps-4">Produkt</th>
                             <th scope="col">Kategori</th>
                             <th scope="col" class="text-end">Lager</th>
                             <th scope="col" class="text-end d-none d-lg-table-cell">Pris</th>
@@ -133,10 +132,19 @@
                         @foreach (var product in FilteredProducts)
                         {
                             <tr>
-                                <td class="ps-4 text-muted d-none d-md-table-cell">@product.Sku</td>
-                                <td class="fw-medium">@product.Name</td>
+                                <td class="ps-4">
+                                    <div class="entity-cell">
+                                        <span class="entity-avatar">
+                                            <span class="bi bi-box-seam"></span>
+                                        </span>
+                                        <span>
+                                            <span class="entity-title">@product.Name</span>
+                                            <span class="entity-subtitle d-block">@product.Sku</span>
+                                        </span>
+                                    </div>
+                                </td>
                                 <td>
-                                    <span class="badge rounded-pill @(product.Category.ToString() == "Materiale" ? "bg-primary" : "bg-success")">
+                                    <span class="status-dot @(product.Category.ToString() == "Materiale" ? "is-active" : "is-muted")">
                                         @(product.Category.ToString() == "Materiale" ? "Materiale" : "Værktøj")
                                     </span>
                                 </td>
@@ -146,28 +154,16 @@
                                 <td class="text-end text-muted d-none d-lg-table-cell">@product.UnitPrice.ToString("C", new CultureInfo("da-DK"))</td>
                                 <td class="text-end pe-4">
                                     <div class="d-flex justify-content-end gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1" @onclick="() => OpenPurchaseModal(product)" title="Registrer køb">
-                                            <span class="bi bi-cart-plus"></span> Køb
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary d-md-none" @onclick="() => OpenPurchaseModal(product)" title="Køb">
+                                        <button type="button" class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => OpenPurchaseModal(product)" title="Registrer køb">
                                             <span class="bi bi-cart-plus"></span>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1" @onclick="() => OpenStockModal(product)" title="Rediger lager">
-                                            <span class="bi bi-stack"></span> Lager
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary d-md-none" @onclick="() => OpenStockModal(product)" title="Lager">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary icon-btn" @onclick="() => OpenStockModal(product)" title="Rediger lager">
                                             <span class="bi bi-stack"></span>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-info d-none d-md-inline-flex align-items-center gap-1" @onclick="() => OpenEditModal(product)" title="Rediger produkt">
-                                            <span class="bi bi-pencil"></span> Rediger
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-info d-md-none" @onclick="() => OpenEditModal(product)" title="Rediger">
+                                        <button type="button" class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => OpenEditModal(product)" title="Rediger produkt">
                                             <span class="bi bi-pencil"></span>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger d-none d-md-inline-flex align-items-center gap-1" @onclick="() => OpenDeleteModal(product)" title="Slet produkt">
-                                            <span class="bi bi-trash"></span> Slet
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger d-md-none" @onclick="() => OpenDeleteModal(product)" title="Slet">
+                                        <button type="button" class="btn btn-sm btn-outline-danger icon-btn" @onclick="() => OpenDeleteModal(product)" title="Slet produkt">
                                             <span class="bi bi-trash"></span>
                                         </button>
                                     </div>
@@ -175,8 +171,8 @@
                             </tr>
                             @if (product.Purchases.Any())
                             {
-                                <tr class="table-light">
-                                    <td colspan="6" class="ps-4 py-2 d-md-none">
+                                <tr class="table-detail-row">
+                                    <td colspan="5" class="ps-4 py-2 d-md-none">
                                         <span class="small text-muted fw-bold">Seneste køb:</span>
                                         @foreach (var purchase in product.Purchases.Take(2))
                                         {
@@ -185,7 +181,7 @@
                                             </span>
                                         }
                                     </td>
-                                    <td colspan="6" class="ps-4 py-2 d-none d-md-table-cell">
+                                    <td colspan="5" class="ps-4 py-2 d-none d-md-table-cell">
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="small text-muted fw-bold">Seneste køb:</span>
                                             @foreach (var purchase in product.Purchases.Take(3))
@@ -216,9 +212,9 @@
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header">
                     <h5 class="modal-title">Opret nyt produkt</h5>
-                    <button type="button" class="btn-close btn-close-white" aria-label="Luk" @onclick="CloseCreateModal"></button>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseCreateModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
@@ -251,7 +247,7 @@
                         <div class="alert alert-danger mt-3 mb-0">@formError</div>
                     }
                 </div>
-                <div class="modal-footer bg-light">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CloseCreateModal">Annuller</button>
                     <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SubmitCreate" disabled="@isSubmitting">
                         @if (isSubmitting)
@@ -272,9 +268,9 @@
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-info text-white">
+                <div class="modal-header">
                     <h5 class="modal-title">Rediger produkt</h5>
-                    <button type="button" class="btn-close btn-close-white" aria-label="Luk" @onclick="CloseEditModal"></button>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseEditModal"></button>
                 </div>
                 <div class="modal-body">
                     @if (selectedProduct is not null)
@@ -313,9 +309,9 @@
                         <div class="alert alert-danger mt-3 mb-0">@formError</div>
                     }
                 </div>
-                <div class="modal-footer bg-light">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CloseEditModal">Annuller</button>
-                    <button type="button" class="btn btn-info text-white d-inline-flex align-items-center gap-2" @onclick="SubmitEdit" disabled="@isSubmitting">
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SubmitEdit" disabled="@isSubmitting">
                         @if (isSubmitting)
                         {
                             <span class="spinner-border spinner-border-sm"></span>
@@ -334,9 +330,9 @@
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-danger text-white">
+                <div class="modal-header">
                     <h5 class="modal-title">Slet produkt</h5>
-                    <button type="button" class="btn-close btn-close-white" aria-label="Luk" @onclick="CloseDeleteModal"></button>
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseDeleteModal"></button>
                 </div>
                 <div class="modal-body">
                     @if (selectedProduct is not null)
@@ -349,7 +345,7 @@
                         <div class="alert alert-danger mt-3 mb-0">@formError</div>
                     }
                 </div>
-                <div class="modal-footer bg-light">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CloseDeleteModal">Annuller</button>
                     <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" @onclick="SubmitDelete" disabled="@isSubmitting">
                         @if (isSubmitting)
@@ -370,7 +366,7 @@
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light">
+                <div class="modal-header">
                     <h5 class="modal-title">Registrer køb</h5>
                     <button type="button" class="btn-close" aria-label="Luk" @onclick="ClosePurchaseModal"></button>
                 </div>
@@ -408,7 +404,7 @@
                         <div class="alert alert-danger mt-3 mb-0">@purchaseError</div>
                     }
                 </div>
-                <div class="modal-footer bg-light">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="ClosePurchaseModal">Annuller</button>
                     <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SubmitPurchase" disabled="@isSubmittingPurchase">
                         @if (isSubmittingPurchase)
@@ -429,7 +425,7 @@
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light">
+                <div class="modal-header">
                     <h5 class="modal-title">Rediger lagerbeholdning</h5>
                     <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseStockModal"></button>
                 </div>
@@ -451,7 +447,7 @@
                         <div class="alert alert-danger mt-3 mb-0">@stockError</div>
                     }
                 </div>
-                <div class="modal-footer bg-light">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CloseStockModal">Annuller</button>
                     <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="SubmitStock" disabled="@isSubmittingStock">
                         @if (isSubmittingStock)
@@ -642,7 +638,8 @@
                 Sku = editForm.Sku,
                 UnitPrice = editForm.UnitPrice,
                 StockQuantity = editForm.StockQuantity,
-                Category = editForm.Category == "Materiale" ? 0 : 1
+                Category = editForm.Category == "Materiale" ? 0 : 1,
+                RowVersion = selectedProduct.RowVersion
             };
 
             var response = await client.PutAsJsonAsync($"api/products/{selectedProduct.Id}", request);
@@ -654,8 +651,9 @@
             }
             else
             {
-                var content = await response.Content.ReadAsStringAsync();
-                formError = $"Fejl: {content}";
+                formError = response.StatusCode == System.Net.HttpStatusCode.Conflict
+                    ? "Produktet er blevet ændret af en anden bruger. Luk vinduet, genindlæs siden og prøv igen."
+                    : $"Fejl: {await response.Content.ReadAsStringAsync()}";
             }
         }
         catch (Exception ex)
@@ -893,6 +891,7 @@
         public int StockQuantity { get; set; }
         public decimal UnitPrice { get; set; }
         public bool IsActive { get; set; }
+        public string RowVersion { get; set; } = "";
         public List<PurchaseHistoryDto> Purchases { get; set; } = [];
     }
 

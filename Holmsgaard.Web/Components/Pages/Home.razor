@@ -2,18 +2,18 @@
 
 <PageTitle>Oversigt - Holmsgaard</PageTitle>
 
-<div class="container mt-4">
+<div class="container dashboard-page mt-4">
     @* Header *@
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="dashboard-header">
         <div>
-            <h2 class="mb-1">Holmsgaard</h2>
-            <p class="text-muted mb-0">Intern oversigt for medarbejdere, aktiviteter og tidsregistrering.</p>
+            <h1 class="dashboard-title">Holmsgaard</h1>
+            <p class="dashboard-subtitle">Intern oversigt for medarbejdere, aktiviteter og tidsregistrering.</p>
         </div>
-        <div class="d-flex gap-2">
-            <a class="btn btn-primary d-inline-flex align-items-center gap-2" href="time">
+        <div class="dashboard-actions">
+            <a class="btn btn-primary d-inline-flex align-items-center gap-2" href="aktiviteter?tab=time">
                 <span class="bi bi-clock-fill"></span> Registrer tid
             </a>
-            <a class="btn btn-outline-primary d-inline-flex align-items-center gap-2" href="employees">
+            <a class="btn btn-outline-primary d-inline-flex align-items-center gap-2" href="aktiviteter?tab=employees">
                 <span class="bi bi-people-fill"></span> Medarbejdere
             </a>
         </div>
@@ -22,7 +22,7 @@
     @* Dashboard Cards *@
     <div class="row g-3">
         <div class="col-12 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="surface-panel h-100">
                 <div class="card-body">
                     <h5 class="card-title d-flex align-items-center gap-2">
                         <span class="bi bi-stack text-primary"></span> Backend
@@ -34,7 +34,7 @@
         </div>
 
         <div class="col-12 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="surface-panel h-100">
                 <div class="card-body">
                     <h5 class="card-title d-flex align-items-center gap-2">
                         <span class="bi bi-layers text-primary"></span> Frontend
@@ -46,12 +46,12 @@
         </div>
 
         <div class="col-12 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="surface-panel h-100">
                 <div class="card-body">
                     <h5 class="card-title d-flex align-items-center gap-2">
                         <span class="bi bi-arrow-right-circle text-warning"></span> Næste fokus
                     </h5>
-                    <p class="text-muted card-text">Rigtig JWT-beskyttelse, OWASP-gennemgang, concurrency og Docker/Compose vil give høj eksamensværdi.</p>
+                    <p class="text-muted card-text">Materialeforbrug på aktiviteter og en dokumenteret OWASP-gennemgang er næste eksamensfokus.</p>
                     <span class="badge rounded-pill bg-warning text-dark">Planlagt</span>
                 </div>
             </div>

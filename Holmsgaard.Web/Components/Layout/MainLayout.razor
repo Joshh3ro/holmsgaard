@@ -14,7 +14,14 @@
         @if (!IsLoginPage)
         {
             <div class="top-row px-4">
-                <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+                <div class="profile-chip" aria-label="Aktiv bruger">
+                    <span class="profile-avatar">HG</span>
+                    <span class="profile-copy">
+                        <span class="profile-name">Holmsgaard</span>
+                        <span class="profile-role">Dashboard</span>
+                    </span>
+                    <span class="bi bi-chevron-down" aria-hidden="true"></span>
+                </div>
             </div>
         }
 

@@ -9,6 +9,7 @@ public sealed class Product
     public int StockQuantity { get; private set; }
     public bool IsActive { get; private set; }
     public ProductCategory Category { get; private set; }
+    public byte[] RowVersion { get; private set; } = [];
 
     public Product(Guid id, string name, string sku, decimal unitPrice, int stockQuantity, ProductCategory category = ProductCategory.Materiale)
     {

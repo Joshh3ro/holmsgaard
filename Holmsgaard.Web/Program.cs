@@ -10,10 +10,12 @@ builder.AddRedisOutputCache("cache");
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+var apiBaseUrl = builder.Configuration["Services:ApiBaseUrl"]
+    ?? "http://localhost:5510";
+
 builder.Services.AddHttpClient("ApiClient", client =>
     {
-        // Use localhost for local development. In Aspire orchestration, use service discovery.
-        client.BaseAddress = new("http://localhost:5510");
+        client.BaseAddress = new Uri(apiBaseUrl);
     });
 
 var app = builder.Build();

@@ -5,19 +5,19 @@
 
 <PageTitle>Tidsregistrering - Holmsgaard</PageTitle>
 
-<div class="container mt-4">
-    @* Header *@
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+<div class="container dashboard-page mt-4">
+    <div class="dashboard-header">
         <div>
-            <h2 class="mb-1">Tidsregistrering</h2>
-            <p class="text-muted mb-0">Se medarbejdernes tider og registrer nye timer.</p>
+            <h1 class="dashboard-title">Tidsregistrering</h1>
+            <p class="dashboard-subtitle">Se medarbejdernes samlede timer, og åbn registreringerne i en modal for at redigere eller oprette nye.</p>
         </div>
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="OpenRegistrationPanel" disabled="@isLoading">
-            <span class="bi bi-plus-circle"></span> Registrer tid
-        </button>
+        <div class="dashboard-actions">
+            <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="OpenRegistrationPanel" disabled="@isLoading">
+                <span class="bi bi-plus-circle"></span> Registrer tid
+            </button>
+        </div>
     </div>
 
-    @* Alerts *@
     @if (!string.IsNullOrEmpty(successMessage))
     {
         <div class="alert alert-success d-inline-flex align-items-center gap-2 mb-3">
@@ -34,7 +34,7 @@
 
     @if (isLoading)
     {
-        <div class="card border-0 shadow-sm">
+        <div class="surface-panel">
             <div class="card-body text-center text-muted">
                 <em>Indlæser tidsregistreringer...</em>
             </div>
@@ -42,85 +42,127 @@
     }
     else
     {
-        <div class="row g-4">
-            @* Employee List *@
-            <div class="col-12 col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-white py-3">
-                        <strong>Medarbejdere</strong>
-                    </div>
-                    <div class="list-group list-group-flush">
+        <div class="stat-strip">
+            <div class="stat-tile is-accent">
+                <div class="stat-tile-label">Registreringer</div>
+                <div class="stat-tile-value">@timeRegistrations.Count</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-tile-label">Timer i alt</div>
+                <div class="stat-tile-value">@timeRegistrations.Sum(registration => registration.Hours).ToString("0.#")</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-tile-label">Medarbejdere</div>
+                <div class="stat-tile-value">@employees.Count</div>
+            </div>
+        </div>
+
+        <div class="surface-panel">
+            <div class="surface-panel-header">
+                <h2 class="surface-panel-title">Timer pr. medarbejder</h2>
+                <span class="surface-panel-meta">@employees.Count viser</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table dashboard-table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="ps-4">Medarbejder</th>
+                            <th scope="col" class="text-end">Registreringer</th>
+                            <th scope="col" class="text-end">Timer</th>
+                            <th scope="col" class="text-end d-none d-lg-table-cell">Timesats</th>
+                            <th scope="col" class="text-end pe-4">Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         @foreach (var employee in employees)
                         {
                             var summary = GetEmployeeSummary(employee.Id);
-                            <button type="button"
-                                    class="list-group-item list-group-item-action py-3 @(selectedEmployeeId == employee.Id ? "active" : "")"
-                                    @onclick="() => SelectEmployee(employee.Id)">
-                                <div class="d-flex justify-content-between align-items-center gap-3">
-                                    <span class="fw-medium">@employee.FullName</span>
-                                    <span class="badge rounded-pill @(selectedEmployeeId == employee.Id ? "bg-light text-dark" : "bg-primary")">@summary.TotalHours.ToString("0.##") t</span>
-                                </div>
-                                <div class="small @(selectedEmployeeId == employee.Id ? "text-white-50" : "text-muted")">
-                                    @summary.RegistrationCount registrering(er)
-                                </div>
-                            </button>
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="entity-cell">
+                                        <span class="entity-avatar">@GetInitials(employee.FullName)</span>
+                                        <span>
+                                            <span class="entity-title">@employee.FullName</span>
+                                            <span class="entity-subtitle d-block">@summary.RegistrationCount registreringer</span>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-end text-nowrap">@summary.RegistrationCount</td>
+                                <td class="text-end text-nowrap fw-semibold">@summary.TotalHours.ToString("0.##") t</td>
+                                <td class="text-end text-nowrap text-muted d-none d-lg-table-cell">@employee.HourlyRate kr/time</td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => OpenEmployeeDetails(employee.Id)" title="Se registreringer">
+                                            <span class="bi bi-list-ul"></span>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => OpenRegistrationPanelForEmployee(employee.Id)" title="Registrer tid">
+                                            <span class="bi bi-plus-lg"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                         }
-                    </div>
-                </div>
+                    </tbody>
+                </table>
             </div>
+        </div>
+    }
+</div>
 
-            @* Registrations Table *@
-            <div class="col-12 col-lg-8">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 py-3">
-                        <div>
-                            <strong>@SelectedEmployeeName</strong>
-                            <div class="small text-muted">Registrerede timer</div>
-                        </div>
+@if (showDetailsPanel)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title">@DetailsEmployeeName</h5>
                         <div class="small text-muted">
-                            @SelectedRegistrations.Sum(registration => registration.Hours).ToString("0.##") timer · @SelectedRegistrations.Count registreringer
+                            @DetailsRegistrations.Sum(registration => registration.Hours).ToString("0.##") timer · @DetailsRegistrations.Count registreringer
                         </div>
                     </div>
-
-                    @if (!SelectedRegistrations.Any())
+                    <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseDetailsPanel"></button>
+                </div>
+                <div class="modal-body p-0">
+                    @if (!DetailsRegistrations.Any())
                     {
-                        <div class="card-body text-center text-muted">
-                            <p class="mb-0">Der er ingen tidsregistreringer for den valgte medarbejder endnu.</p>
-                        </div>
+                        <div class="p-4 text-center text-muted">Der er ingen tidsregistreringer for medarbejderen endnu.</div>
                     }
                     else
                     {
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                            <table class="table dashboard-table table-hover align-middle">
+                                <thead>
                                     <tr>
-                                        <th scope="col" class="ps-4">Dato</th>
-                                        <th scope="col">Aktivitet</th>
+                                        <th scope="col" class="ps-4">Aktivitet</th>
+                                        <th scope="col">Dato</th>
                                         <th scope="col" class="text-end">Timer</th>
                                         <th scope="col" class="d-none d-lg-table-cell">Note</th>
                                         <th scope="col" class="text-end pe-4">Handlinger</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var registration in SelectedRegistrations)
+                                    @foreach (var registration in DetailsRegistrations)
                                     {
                                         <tr>
-                                            <td class="ps-4 text-nowrap">@registration.WorkDate.ToString("dd-MM-yyyy")</td>
-                                            <td class="fw-medium">@GetActivityTitle(registration.ActivityId)</td>
-                                            <td class="text-end text-nowrap">@registration.Hours.ToString("0.##")</td>
+                                            <td class="ps-4">
+                                                <div class="entity-cell">
+                                                    <span class="entity-avatar"><span class="bi bi-clock-history"></span></span>
+                                                    <span>
+                                                        <span class="entity-title">@GetActivityTitle(registration.ActivityId)</span>
+                                                        <span class="entity-subtitle d-block d-lg-none">@(!string.IsNullOrWhiteSpace(registration.Note) ? registration.Note : "Ingen note")</span>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td class="text-nowrap">@registration.WorkDate.ToString("dd-MM-yyyy")</td>
+                                            <td class="text-end text-nowrap fw-semibold">@registration.Hours.ToString("0.##") t</td>
                                             <td class="text-muted d-none d-lg-table-cell">@(!string.IsNullOrWhiteSpace(registration.Note) ? registration.Note : "-")</td>
-                                            <td class="pe-4">
+                                            <td class="text-end pe-4">
                                                 <div class="d-flex justify-content-end gap-1">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1" @onclick="() => OpenEditPanel(registration)">
-                                                        <span class="bi bi-pencil"></span> Rediger
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary d-md-none" @onclick="() => OpenEditPanel(registration)" title="Rediger">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary icon-btn" @onclick="() => OpenEditPanel(registration)" title="Rediger">
                                                         <span class="bi bi-pencil"></span>
                                                     </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger d-none d-md-inline-flex align-items-center gap-1" @onclick="() => DeleteRegistration(registration)">
-                                                        <span class="bi bi-trash"></span> Slet
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger d-md-none" @onclick="() => DeleteRegistration(registration)" title="Slet">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger icon-btn" @onclick="() => DeleteRegistration(registration)" title="Slet">
                                                         <span class="bi bi-trash"></span>
                                                     </button>
                                                 </div>
@@ -132,18 +174,23 @@
                         </div>
                     }
                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseDetailsPanel">Luk</button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" @onclick="() => OpenRegistrationPanelForEmployee(detailsEmployeeId)">
+                        <span class="bi bi-plus-circle"></span> Registrer tid
+                    </button>
+                </div>
             </div>
         </div>
-    }
-</div>
+    </div>
+}
 
-@* Registration Modal *@
 @if (showRegistrationPanel)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light">
+                <div class="modal-header">
                     <h5 class="modal-title">@PanelTitle</h5>
                     <button type="button" class="btn-close" aria-label="Luk" @onclick="CloseRegistrationPanel"></button>
                 </div>
@@ -191,7 +238,7 @@
                             </div>
                         </div>
 
-                        <div class="modal-footer bg-light px-0 pb-0 mt-4">
+                        <div class="modal-footer px-0 pb-0 mt-4">
                             <button type="button" class="btn btn-outline-secondary" @onclick="CloseRegistrationPanel">Annuller</button>
                             <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2" disabled="@isSubmitting">
                                 @if (isSubmitting)
@@ -213,10 +260,12 @@
     private List<ActivityDto> activities = [];
     private List<TimeRegistrationDto> timeRegistrations = [];
     private Guid? selectedEmployeeId;
+    private Guid? detailsEmployeeId;
     private Guid? editingRegistrationId;
     private bool isLoading = true;
     private bool isSubmitting;
     private bool showRegistrationPanel;
+    private bool showDetailsPanel;
     private string? successMessage;
     private string? errorMessage;
 
@@ -226,15 +275,15 @@
     private string PanelTitle => IsEditing ? "Rediger tid" : "Registrer tid";
     private string SubmitButtonText => IsEditing ? "Gem ændringer" : "Gem tid";
 
-    private IReadOnlyCollection<TimeRegistrationDto> SelectedRegistrations => selectedEmployeeId is null
+    private IReadOnlyCollection<TimeRegistrationDto> DetailsRegistrations => detailsEmployeeId is null
         ? []
         : timeRegistrations
-            .Where(registration => registration.EmployeeId == selectedEmployeeId)
+            .Where(registration => registration.EmployeeId == detailsEmployeeId)
             .OrderByDescending(registration => registration.WorkDate)
             .ThenBy(registration => registration.Id)
             .ToArray();
 
-    private string SelectedEmployeeName => employees.FirstOrDefault(employee => employee.Id == selectedEmployeeId)?.FullName ?? "Vælg en medarbejder";
+    private string DetailsEmployeeName => employees.FirstOrDefault(employee => employee.Id == detailsEmployeeId)?.FullName ?? "Tidsregistreringer";
 
     protected override async Task OnInitializedAsync()
     {
@@ -268,9 +317,16 @@
         }
     }
 
-    private void SelectEmployee(Guid employeeId)
+    private void OpenEmployeeDetails(Guid employeeId)
     {
-        selectedEmployeeId = employeeId;
+        detailsEmployeeId = employeeId;
+        showDetailsPanel = true;
+    }
+
+    private void CloseDetailsPanel()
+    {
+        showDetailsPanel = false;
+        detailsEmployeeId = null;
     }
 
     private void OpenRegistrationPanel()
@@ -287,9 +343,26 @@
         showRegistrationPanel = true;
     }
 
+    private void OpenRegistrationPanelForEmployee(Guid? employeeId)
+    {
+        editingRegistrationId = null;
+        selectedEmployeeId = employeeId;
+        formModel = new TimeRegistrationForm
+        {
+            EmployeeId = employeeId?.ToString(),
+            WorkDate = DateTime.Today,
+            Hours = 1.0m
+        };
+        successMessage = null;
+        errorMessage = null;
+        showDetailsPanel = false;
+        showRegistrationPanel = true;
+    }
+
     private void OpenEditPanel(TimeRegistrationDto registration)
     {
         editingRegistrationId = registration.Id;
+        selectedEmployeeId = registration.EmployeeId;
         formModel = new TimeRegistrationForm
         {
             EmployeeId = registration.EmployeeId.ToString(),
@@ -300,6 +373,7 @@
         };
         successMessage = null;
         errorMessage = null;
+        showDetailsPanel = false;
         showRegistrationPanel = true;
     }
 
@@ -411,6 +485,17 @@
     private string GetActivityTitle(Guid activityId)
     {
         return activities.FirstOrDefault(activity => activity.Id == activityId)?.Title ?? "Ukendt aktivitet";
+    }
+
+    private static string GetInitials(string fullName)
+    {
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length switch
+        {
+            0 => "?",
+            1 => parts[0][..Math.Min(parts[0].Length, 2)].ToUpperInvariant(),
+            _ => $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+        };
     }
 
     private sealed record EmployeeSummary(decimal TotalHours, int RegistrationCount);

@@ -1,29 +1,40 @@
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Holmsgaard</a>
-    </div>
-</div>
+<div class="nav-shell">
+    <a class="brand-mark" href="home" aria-label="Holms Gaard startside" title="Holms Gaard">
+        <span class="nav-icon brand-initials">HG</span>
+        <span class="nav-text">Holms Gaard</span>
+    </a>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+    <button type="button" title="Menu" class="nav-action" aria-label="Menu">
+        <span class="nav-icon bi bi-list" aria-hidden="true"></span>
+        <span class="nav-text">Menu</span>
+    </button>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="home" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Hjem
-            </NavLink>
-        </div>
-        
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="aktiviteter">
-                <span class="bi bi-calendar-check" aria-hidden="true"></span> Aktiviteter
-            </NavLink>
-        </div>
+    <nav class="nav-menu" aria-label="Primær navigation">
+        <NavLink class="nav-link" href="home" Match="NavLinkMatch.All" title="Hjem">
+            <span class="nav-icon bi bi-house-door" aria-hidden="true"></span>
+            <span class="nav-text">Hjem</span>
+        </NavLink>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="lager">
-                <span class="bi bi-box-seam" aria-hidden="true"></span> Lager
-            </NavLink>
-        </div>
+        <NavLink class="nav-link" href="aktiviteter" title="Aktiviteter">
+            <span class="nav-icon bi bi-calendar-check" aria-hidden="true"></span>
+            <span class="nav-text">Aktiviteter</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="lager" title="Lager">
+            <span class="nav-icon bi bi-box-seam" aria-hidden="true"></span>
+            <span class="nav-text">Lager</span>
+        </NavLink>
+    </nav>
+
+    <nav class="nav-menu nav-menu-secondary" aria-label="Sekundær navigation">
+        <a class="nav-link" href="https://learn.microsoft.com/aspnet/core/" target="_blank" rel="noopener" title="Dokumentation">
+            <span class="nav-icon bi bi-globe2" aria-hidden="true"></span>
+            <span class="nav-text">Dokumentation</span>
+        </a>
+
+        <a class="nav-link" href="login" title="Log ud">
+            <span class="nav-icon bi bi-box-arrow-right" aria-hidden="true"></span>
+            <span class="nav-text">Log ud</span>
+        </a>
     </nav>
 </div>

@@ -57,6 +57,7 @@ public sealed class ApplicationDbContext : DbContext
             entity.Property(e => e.Sku).IsRequired().HasMaxLength(50);
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.RowVersion).IsRowVersion();
             entity.Property(e => e.Category)
                   .HasConversion<string>()
                   .HasMaxLength(50);
@@ -65,6 +66,7 @@ public sealed class ApplicationDbContext : DbContext
         modelBuilder.Entity<TimeRegistration>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Hours).HasPrecision(18, 2);
             entity.Property(e => e.Note).HasMaxLength(1000);
             entity.HasOne<Employee>()
                   .WithMany()
@@ -79,6 +81,7 @@ public sealed class ApplicationDbContext : DbContext
         modelBuilder.Entity<WarehousePurchase>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.UnitPriceAtPurchase).HasPrecision(18, 2);
             entity.Property(e => e.Supplier).HasMaxLength(200);
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.HasOne<Product>()

@@ -26,7 +26,14 @@ public class ProductServiceTests
         var service = new ProductService(new InMemoryProductRepository());
         var product = service.CreateProduct(new CreateProductCommand("Spade", "SPA-001", 199m, 10, ProductCategory.Værktøj));
 
-        var updated = service.UpdateProduct(new UpdateProductCommand(product.Id, "Rive", "RIV-001", 149m, 5, ProductCategory.Værktøj));
+        var updated = service.UpdateProduct(new UpdateProductCommand(
+            product.Id,
+            "Rive",
+            "RIV-001",
+            149m,
+            5,
+            ProductCategory.Værktøj,
+            []));
 
         Assert.NotNull(updated);
         Assert.Equal("Rive", updated.Name);

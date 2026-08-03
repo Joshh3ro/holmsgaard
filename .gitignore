@@ -5,6 +5,7 @@ bin/
 obj/
 packages/
 .vs/
-secrets.json, .env, *.pfx
-
-
+secrets.json
+.env
+*.pfx
+docs/

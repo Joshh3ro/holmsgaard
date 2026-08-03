@@ -1,4 +1,5 @@
 using Holmsgaard.ApiService.Application.Interfaces;
+using Holmsgaard.ApiService.Application.Exceptions;
 using Holmsgaard.ApiService.Data;
 using Holmsgaard.ApiService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -40,8 +41,19 @@ public sealed class EfCoreProductRepository : IProductRepository
         }
     }
 
-    public void SaveChanges()
+    public void SaveChanges(Product product, byte[] expectedRowVersion)
     {
-        _context.SaveChanges();
+        _context.Entry(product).Property(p => p.RowVersion).OriginalValue = expectedRowVersion;
+
+        try
+        {
+            _context.SaveChanges();
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            throw new ConcurrencyConflictException(
+                "Produktet blev ændret af en anden bruger. Genindlæs siden og prøv igen.",
+                exception);
+        }
     }
 }

@@ -1,4 +1,5 @@
 using Holmsgaard.ApiService.Application.Commands;
+using Holmsgaard.ApiService.Application.Exceptions;
 using Holmsgaard.ApiService.Application.Queries;
 using Holmsgaard.ApiService.Application.Services;
 using Holmsgaard.ApiService.Contracts.Dto;
@@ -42,8 +43,34 @@ public sealed class ProductsController(ProductService productService) : Controll
     {
         try
         {
-            var product = productService.UpdateProduct(new UpdateProductCommand(id, request.Name, request.Sku, request.UnitPrice, request.StockQuantity, request.Category));
+            if (string.IsNullOrWhiteSpace(request.RowVersion))
+            {
+                return BadRequest("RowVersion er påkrævet.");
+            }
+
+            var rowVersion = Convert.FromBase64String(request.RowVersion);
+            var product = productService.UpdateProduct(new UpdateProductCommand(
+                id,
+                request.Name,
+                request.Sku,
+                request.UnitPrice,
+                request.StockQuantity,
+                request.Category,
+                rowVersion));
             return product is null ? NotFound() : Ok(product);
+        }
+        catch (ConcurrencyConflictException exception)
+        {
+            return Conflict(new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Samtidig ændring registreret",
+                Detail = exception.Message
+            });
+        }
+        catch (FormatException)
+        {
+            return BadRequest("RowVersion har et ugyldigt format.");
         }
         catch (ArgumentException exception)
         {

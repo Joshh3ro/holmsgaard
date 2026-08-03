@@ -1,15 +1,22 @@
-using System.Security.Cryptography;
-using System.Text;
+using System.Security.Claims;
 using Holmsgaard.ApiService.Application.Interfaces;
 using Holmsgaard.ApiService.Contracts.Dto;
+using Holmsgaard.ApiService.Domain.Entities;
+using Holmsgaard.ApiService.Security;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Holmsgaard.ApiService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class AuthController(IEmployeeRepository employeeRepository) : ControllerBase
+public sealed class AuthController(
+    IEmployeeRepository employeeRepository,
+    IPasswordHasher<Employee> passwordHasher,
+    JwtTokenService tokenService) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpPost("login")]
     public ActionResult<AuthResponse> Login(LoginRequest request)
     {
@@ -21,24 +28,32 @@ public sealed class AuthController(IEmployeeRepository employeeRepository) : Con
         var employee = employeeRepository.GetAll()
             .FirstOrDefault(e => e.Email.Equals(request.Email, StringComparison.OrdinalIgnoreCase));
 
-        if (employee is null)
+        if (employee is null || !employee.IsActive)
         {
             return Unauthorized("Invalid email or password.");
         }
 
-        var hash = HashPassword(request.Password);
-        if (employee.PasswordHash != hash)
+        var verification = passwordHasher.VerifyHashedPassword(
+            employee,
+            employee.PasswordHash,
+            request.Password);
+
+        if (verification == PasswordVerificationResult.Failed)
         {
             return Unauthorized("Invalid email or password.");
         }
 
-        var token = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-        return Ok(new AuthResponse(
-            Token: token,
-            TokenType: "Bearer",
-            ExpiresAt: DateTimeOffset.UtcNow.AddHours(8)));
+        if (verification == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            employee.SetPassword(passwordHasher.HashPassword(employee, request.Password));
+            employeeRepository.Update(employee);
+            employeeRepository.SaveChanges();
+        }
+
+        return Ok(tokenService.CreateToken(employee));
     }
 
+    [AllowAnonymous]
     [HttpPost("register")]
     public ActionResult<AuthResponse> Register(RegisterRequest request)
     {
@@ -49,6 +64,11 @@ public sealed class AuthController(IEmployeeRepository employeeRepository) : Con
             return BadRequest("Full name, email and password are required.");
         }
 
+        if (request.Password.Length < 8)
+        {
+            return BadRequest("Password must contain at least 8 characters.");
+        }
+
         var existing = employeeRepository.GetAll()
             .FirstOrDefault(e => e.Email.Equals(request.Email, StringComparison.OrdinalIgnoreCase));
 
@@ -57,23 +77,28 @@ public sealed class AuthController(IEmployeeRepository employeeRepository) : Con
             return BadRequest("An employee with this email already exists.");
         }
 
-        var hash = HashPassword(request.Password);
-        // HourlyRate default 0 for registered users
         var employee = new Domain.Entities.Employee(
-            Guid.NewGuid(), request.FullName, request.Email, 0m, hash);
+            Guid.NewGuid(), request.FullName, request.Email, 0m);
+        employee.SetPassword(passwordHasher.HashPassword(employee, request.Password));
 
         employeeRepository.Add(employee);
 
-        var token = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-        return Ok(new AuthResponse(
-            Token: token,
-            TokenType: "Bearer",
-            ExpiresAt: DateTimeOffset.UtcNow.AddHours(8)));
+        return Ok(tokenService.CreateToken(employee));
     }
 
-    private static string HashPassword(string password)
+    [Authorize]
+    [HttpGet("me")]
+    public ActionResult<CurrentUserResponse> GetCurrentUser()
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password + "HolmsgaardSalt2026"));
-        return Convert.ToBase64String(bytes);
+        var idValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(idValue, out var employeeId))
+        {
+            return Unauthorized();
+        }
+
+        return Ok(new CurrentUserResponse(
+            employeeId,
+            User.FindFirstValue(ClaimTypes.Name) ?? string.Empty,
+            User.FindFirstValue(ClaimTypes.Email) ?? string.Empty));
     }
 }
