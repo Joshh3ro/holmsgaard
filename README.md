@@ -1,3 +1,5 @@
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/8bf38623-dcb8-48a1-a35b-9c4ce0102c25" />
+
 # Holmsgaard
 
 Holmsgaard er en browserbaseret løsning til en håndværksvirksomhed. Systemet samler kunder, aktiviteter, medarbejdere, tidsregistrering og lager i én Blazor-applikation med et separat REST API.
